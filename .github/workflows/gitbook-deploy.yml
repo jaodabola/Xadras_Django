@@ -1,0 +1,66 @@
+# XADRAS - Publicação da Documentação da API no GitBook
+# Valida e publica a especificação OpenAPI no GitBook usando a CLI oficial
+
+name: Publicar Documentação API no GitBook
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'openapi.yaml'
+      - '.github/workflows/gitbook-deploy.yml'
+  
+  pull_request:
+    paths:
+      - 'openapi.yaml'
+  
+  # Permite acionamento manual
+  workflow_dispatch:
+
+jobs:
+  validar-e-publicar:
+    name: Validar e Publicar no GitBook
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Fazer checkout do repositório
+        uses: actions/checkout@v4
+      
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Validar especificação OpenAPI
+        run: |
+          npm install -g @redocly/cli
+          echo "🔍 A validar especificação OpenAPI..."
+          redocly lint openapi.yaml \
+            --skip-rule=no-path-trailing-slash \
+            --skip-rule=operation-4xx-response \
+            --skip-rule=no-server-example.com \
+            --skip-rule=info-license-strict
+          echo "✅ Especificação OpenAPI válida!"
+      
+      - name: Instalar CLI do GitBook
+        run: npm install -g @gitbook/cli
+      
+      - name: Publicar no GitBook
+        env:
+          GITBOOK_TOKEN: ${{ secrets.GITBOOK_API_TOKEN }}
+        run: |
+          echo "📚 A publicar no GitBook..."
+          gitbook openapi publish \
+            --spec Xadras \
+            --organization 1ePv0zfiw298i7k4f0YD \
+            openapi.yaml
+          echo "✅ Publicado no GitBook!"
+      
+      - name: Resumo
+        run: |
+          echo "## 🎉 Publicação Concluída!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Especificação OpenAPI**: \`openapi.yaml\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Publicado em**: GitBook (Xadras)" >> $GITHUB_STEP_SUMMARY

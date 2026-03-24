@@ -1,0 +1,48 @@
+# Core
+Django
+python-dotenv
+
+# API
+djangorestframework
+djangorestframework-simplejwt
+djoser
+
+# Real-time
+channels==4.0.0
+channels-redis==4.2.0
+asgiref==3.7.2
+daphne==4.1.2  # ASGI server for Django Channels WebSocket support
+
+# Database
+psycopg2-binary  # Para PostgreSQL
+# sqlite3 já vem com Python
+
+# Game Logic
+python-chess
+
+# Caching & Message Broker
+redis
+django-redis
+
+# Utils
+Pillow  # Para processamento de imagens (se necessário)
+whitenoise  # Para servir ficheiros estáticos em produção
+
+# Deteção de tabuleiro (visão computacional)
+opencv-python
+numpy
+ultralytics  # YOLO para deteção do tabuleiro
+gunicorn  # Servidor WSGI para produção
+
+# Security
+python-jose  # Para JWT
+cryptography
+django-ratelimit  # Rate limiting para APIs
+
+# CORS
+django-cors-headers
+
+# Email
+sendgrid  # Para envio de emails (opcional)
+
+python-json-logger

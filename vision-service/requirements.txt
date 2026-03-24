@@ -1,0 +1,22 @@
+# XADRAS Vision Service - Dependencies
+# Optimized for Raspberry Pi 5
+
+# Core
+numpy>=1.24.0
+
+# OpenCV with ArUco markers support
+# Note: opencv-contrib-python includes everything from opencv-python
+opencv-contrib-python>=4.8.0
+
+# YOLO (Ultralytics)
+ultralytics>=8.0.0
+
+# WebSocket communication
+websockets>=11.0
+
+# Raspberry Pi Camera (optional - only needed on RPi)
+# Install separately on Raspberry Pi:
+# pip install picamera2
+
+# Configuration
+python-dotenv>=1.0.0

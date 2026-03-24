@@ -1,0 +1,1996 @@
+openapi: 3.0.3
+info:
+  title: XADRAS Chess Platform API
+  version: 1.0.0
+  description: |
+    ## XADRAS - Plataforma de Xadrez com Visão Computacional
+
+    Bem-vindo à documentação da API do XADRAS! Esta plataforma combina reconhecimento de tabuleiros físicos de xadrez com jogos online em tempo real.
+
+    {% hint style="info" %}
+    **O que é o XADRAS?**  
+    Uma plataforma inovadora que usa visão computacional para detetar peças em tabuleiros físicos e sincronizar jogadas em tempo real.
+    {% endhint %}
+
+    {% tabs %}
+    {% tab title="Produção" %}
+    **Base URL**  
+    `https://api.xadras.com`
+    {% endtab %}
+
+    {% tab title="Desenvolvimento" %}
+    **Base URL**  
+    `http://localhost:8000`
+    {% endtab %}
+    {% endtabs %}
+
+    ### Começar a Usar
+    {% stepper %}
+    {% step %}
+    ### Criar uma conta
+    Regista-te em `/api/users/` ou cria uma conta de convidado em `/api/accounts/guest/`.
+    {% endstep %}
+    {% step %}
+    ### Obter o token de autenticação
+    Faz login em `/api/token/login/` para receber o teu token.
+    {% endstep %}
+    {% step %}
+    ### Fazer o primeiro pedido
+    Usa o header `Authorization: Token <token>` em todos os pedidos autenticados.
+    {% endstep %}
+    {% endstepper %}
+
+    ### Funcionalidades Principais
+    <table data-view="cards"><thead><tr><th></th><th></th></tr></thead><tbody><tr><td><strong>🎮 Jogos</strong></td><td>Criar e jogar partidas de xadrez em tempo real</td></tr><tr><td><strong>🏆 Torneios</strong></td><td>Sistema Swiss com classificações e emparelhamentos</td></tr><tr><td><strong>📷 Visão AI</strong></td><td>Deteção de peças via câmaras e marcadores ArUco</td></tr><tr><td><strong>⚡ Matchmaking</strong></td><td>Emparelhamento automático baseado em ELO</td></tr></tbody></table>
+
+    {% hint style="warning" %}
+    Os endpoints WebSocket (`/ws/game/{game_id}/`) requerem autenticação via query parameter: `?token=<auth_token>`
+    {% endhint %}
+
+  contact:
+    name: XADRAS Development Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.xadras.com
+    description: Servidor de Produção
+  - url: http://localhost:8000
+    description: Servidor de Desenvolvimento Local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAGS - Organização da Documentação
+# ═══════════════════════════════════════════════════════════════════════════════
+tags:
+  - name: Authentication
+    x-page-title: Autenticação
+    x-page-description: Registo de utilizadores, login e gestão de tokens
+    x-page-icon: key
+  - name: Accounts
+    x-page-title: Contas
+    x-page-description: Perfis de utilizadores, estatísticas e contas de convidado
+    x-page-icon: user
+  - name: Games
+    x-page-title: Jogos
+    x-page-description: Gestão de partidas de xadrez e jogadas
+    x-page-icon: chess-board
+  - name: Matchmaking
+    x-page-title: Matchmaking
+    x-page-description: Fila de emparelhamento automático de jogadores
+    x-page-icon: users
+  - name: Tournaments
+    x-page-title: Torneios
+    x-page-description: Criação e gestão de torneios Swiss
+    x-page-icon: trophy
+  - name: Cameras
+    x-page-title: Câmaras
+    x-page-description: Gestão de câmaras e streams para visão AI
+    x-page-icon: camera
+  - name: WebSocket
+    x-page-title: WebSocket
+    x-page-description: Endpoints de comunicação em tempo real
+    x-page-icon: bolt
+
+paths:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # AUTHENTICATION ENDPOINTS (Djoser)
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  /api/users/:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      operationId: createUser
+      security: []  # Public endpoint - no auth required
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  
+  /api/users/me/:
+    get:
+      tags: [Authentication]
+      summary: Get current authenticated user
+      operationId: getCurrentUser
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  
+  /api/token/login/:
+    post:
+      tags: [Authentication]
+      summary: Obtain authentication token
+      operationId: login
+      security: []  # Public endpoint - no auth required
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: "player123"
+                password:
+                  type: string
+                  format: password
+                  example: "securepassword123"
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auth_token:
+                    type: string
+                    description: Authentication token for API requests
+                    example: "9944b09199c62bcf..."
+        '400':
+          description: Invalid credentials
+      x-codeSamples:
+        - lang: cURL
+          label: CLI
+          source: |
+            curl -X POST https://api.xadras.com/api/token/login/ \
+              -H "Content-Type: application/json" \
+              -d '{"username": "player123", "password": "securepassword123"}'
+        - lang: JavaScript
+          label: Fetch
+          source: |
+            fetch('https://api.xadras.com/api/token/login/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: 'player123',
+                password: 'securepassword123'
+              })
+            })
+            .then(r => r.json())
+            .then(data => console.log(data.auth_token))
+        - lang: Python
+          label: Requests
+          source: |
+            import requests
+            
+            response = requests.post(
+                'https://api.xadras.com/api/token/login/',
+                json={'username': 'player123', 'password': 'securepassword123'}
+            )
+            token = response.json()['auth_token']
+  
+  /api/token/logout/:
+    post:
+      tags: [Authentication]
+      summary: Invalidate authentication token
+      operationId: logout
+      security:
+        - tokenAuth: []
+      responses:
+        '204':
+          description: Logout successful
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ACCOUNTS ENDPOINTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  /api/accounts/guest/:
+    post:
+      tags: [Accounts]
+      summary: Create a guest user account
+      description: |
+        Creates a temporary guest account with a random username.
+        Rate limited to 3 requests per minute per IP.
+      operationId: createGuest
+      security: []  # Public endpoint - no auth required
+      responses:
+        '201':
+          description: Guest account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          description: Server error
+  
+  /api/accounts/guest/delete/:
+    delete:
+      tags: [Accounts]
+      summary: Delete guest account (self-destruct)
+      description: Only guest users can delete their own accounts
+      operationId: deleteGuest
+      security:
+        - tokenAuth: []
+      responses:
+        '204':
+          description: Guest account deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Only guest users can use this endpoint
+  
+  /api/accounts/profile/:
+    get:
+      tags: [Accounts]
+      summary: Get user profile information
+      operationId: getUserProfile
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: User profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  
+  /api/accounts/stats/:
+    get:
+      tags: [Accounts]
+      summary: Get detailed user statistics
+      operationId: getUserStats
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  
+  /api/accounts/csrf/:
+    get:
+      tags: [Accounts]
+      summary: Set CSRF cookie
+      operationId: getCSRFToken
+      security: []  # Public endpoint - no auth required
+      responses:
+        '200':
+          description: CSRF cookie set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "CSRF cookie set"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # GAME ENDPOINTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  /api/game/:
+    get:
+      tags: [Games]
+      summary: List user's games
+      description: Returns games where the authenticated user is a participant
+      operationId: listGames
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: List of games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Game'
+    
+    post:
+      tags: [Games]
+      summary: Create a new game
+      description: |
+        Creates a new chess game with the authenticated user as white player.
+        Rate limited to 10 games per minute.
+      operationId: createGame
+      security:
+        - tokenAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Empty body - game settings will use defaults
+      responses:
+        '201':
+          description: Game created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  
+  /api/game/{id}/:
+    get:
+      tags: [Games]
+      summary: Get game details
+      operationId: getGame
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: Game details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  
+  /api/game/{id}/join/:
+    post:
+      tags: [Games]
+      summary: Join a game as black player
+      operationId: joinGame
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: Successfully joined game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Game not available (already has black player or not pending)
+  
+  /api/game/{id}/move/:
+    post:
+      tags: [Games]
+      summary: Make a move in the game
+      description: |
+        Submit a chess move. Validates turn order, move legality, and updates game state.
+        Automatically detects checkmate, stalemate, and draws.
+        Rate limited to 60 moves per minute.
+      operationId: makeMove
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveRequest'
+      responses:
+        '201':
+          description: Move recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Move'
+        '400':
+          description: Invalid move or not your turn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/game/{id}/end/:
+    post:
+      tags: [Games]
+      summary: End the game with a result
+      description: Manually end the game (resignation, time forfeit, etc.)
+      operationId: endGame
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result:
+                  type: string
+                  enum: [WHITE_WIN, BLACK_WIN, DRAW]
+                  description: Game result
+      responses:
+        '200':
+          description: Game ended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Game not in progress or invalid result
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # MATCHMAKING ENDPOINTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  /api/matchmaking/:
+    get:
+      tags: [Matchmaking]
+      summary: Get matchmaking queue status
+      description: Check if user is currently in the matchmaking queue
+      operationId: getMatchmakingStatus
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: Queue status
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/MatchmakingQueueEntry'
+                  - type: object
+                    properties:
+                      in_queue:
+                        type: boolean
+                        example: false
+  
+  /api/matchmaking/join/:
+    post:
+      tags: [Matchmaking]
+      summary: Join the matchmaking queue
+      description: |
+        Join the queue to be matched with another player.
+        If match is found immediately, returns game details.
+        Rate limited to 20 requests per minute.
+      operationId: joinMatchmaking
+      security:
+        - tokenAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferred_color:
+                  type: string
+                  enum: [WHITE, BLACK, ANY]
+                  default: ANY
+                  description: Preferred piece color
+      responses:
+        '200':
+          description: Match found immediately
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchFound'
+        '201':
+          description: Added to queue (waiting for opponent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueuedResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  
+  /api/matchmaking/leave/:
+    post:
+      tags: [Matchmaking]
+      summary: Leave the matchmaking queue
+      operationId: leaveMatchmaking
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: Left queue or was not in queue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, error]
+                  message:
+                    type: string
+        '404':
+          description: Not in the matchmaking queue
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TOURNAMENT ENDPOINTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  /api/tournaments/:
+    get:
+      tags: [Tournaments]
+      summary: List tournaments
+      description: Returns public tournaments and tournaments user is participating in
+      operationId: listTournaments
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: List of tournaments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tournament'
+    
+    post:
+      tags: [Tournaments]
+      summary: Create a new tournament
+      description: Rate limited to 5 tournaments per minute
+      operationId: createTournament
+      security:
+        - tokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TournamentCreate'
+      responses:
+        '201':
+          description: Tournament created (creator auto-joined)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  
+  /api/tournaments/{id}/:
+    get:
+      tags: [Tournaments]
+      summary: Get tournament details
+      operationId: getTournament
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '200':
+          description: Tournament details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  
+  /api/tournaments/{id}/join/:
+    post:
+      tags: [Tournaments]
+      summary: Join a tournament
+      description: Join tournament during registration phase
+      operationId: joinTournament
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '201':
+          description: Successfully joined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TournamentParticipant'
+        '400':
+          description: Registration closed, tournament full, or already registered
+  
+  /api/tournaments/{id}/leave/:
+    post:
+      tags: [Tournaments]
+      summary: Leave a tournament
+      description: Only during registration phase. Organizer cannot leave.
+      operationId: leaveTournament
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '200':
+          description: Successfully left tournament
+        '400':
+          description: Cannot leave after registration or organizer
+  
+  /api/tournaments/{id}/start/:
+    post:
+      tags: [Tournaments]
+      summary: Start the tournament
+      description: Organizer only. Calculates seeds and sets status to IN_PROGRESS.
+      operationId: startTournament
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '200':
+          description: Tournament started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '400':
+          description: Cannot start (not enough participants or already started)
+        '403':
+          description: Only organizer can start
+  
+  /api/tournaments/{id}/participants/:
+    get:
+      tags: [Tournaments]
+      summary: Get tournament participants
+      operationId: getTournamentParticipants
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '200':
+          description: List of participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TournamentParticipant'
+  
+  /api/tournaments/{id}/standings/:
+    get:
+      tags: [Tournaments]
+      summary: Get tournament standings
+      description: Returns current standings with tiebreaker scores
+      operationId: getTournamentStandings
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '200':
+          description: Tournament standings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TournamentStanding'
+  
+  /api/tournaments/{id}/rounds/:
+    get:
+      tags: [Tournaments]
+      summary: Get tournament rounds
+      operationId: getTournamentRounds
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '200':
+          description: List of rounds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TournamentRound'
+  
+  /api/tournaments/{id}/rounds/{round_number}/:
+    get:
+      tags: [Tournaments]
+      summary: Get round details with pairings
+      operationId: getTournamentRound
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+        - name: round_number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Round details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  round:
+                    $ref: '#/components/schemas/TournamentRound'
+                  pairings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TournamentPairing'
+        '404':
+          description: Round not found
+  
+  /api/tournaments/{id}/generate_pairings/:
+    post:
+      tags: [Tournaments]
+      summary: Generate pairings for next round
+      description: Organizer only. Uses Swiss system algorithm.
+      operationId: generatePairings
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      responses:
+        '201':
+          description: Pairings generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  round_number:
+                    type: integer
+                  pairings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TournamentPairing'
+        '400':
+          description: Cannot generate pairings
+        '403':
+          description: Only organizer can generate pairings
+  
+  /api/tournaments/{id}/start_round/:
+    post:
+      tags: [Tournaments]
+      summary: Start a specific round
+      description: Organizer only
+      operationId: startTournamentRound
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [round_number]
+              properties:
+                round_number:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Round started
+        '400':
+          description: Invalid round or cannot start
+        '403':
+          description: Only organizer can start rounds
+  
+  /api/tournaments/{id}/assign_boards/:
+    post:
+      tags: [Tournaments]
+      summary: Assign physical boards to pairings
+      description: Organizer only. Links camera/vision AI to game pairings.
+      operationId: assignBoards
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TournamentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [round_number]
+              properties:
+                round_number:
+                  type: integer
+                board_assignments:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: "Map of pairing_id to board_id"
+      responses:
+        '200':
+          description: Boards assigned
+        '403':
+          description: Only organizer can assign boards
+  
+  /api/join/:
+    post:
+      tags: [Tournaments]
+      summary: Join tournament by code
+      description: Join a tournament using its unique join code
+      operationId: joinTournamentByCode
+      security:
+        - tokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [join_code]
+              properties:
+                join_code:
+                  type: string
+                  maxLength: 20
+                  description: Tournament join code
+                  example: "ABC123"
+      responses:
+        '201':
+          description: Successfully joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tournament:
+                    $ref: '#/components/schemas/Tournament'
+                  participant:
+                    $ref: '#/components/schemas/TournamentParticipant'
+        '400':
+          description: Invalid code, registration closed, or already registered
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # CAMERA & STREAM ENDPOINTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  
+  /api/cameras/:
+    get:
+      tags: [Cameras]
+      summary: List cameras
+      description: Staff sees all, users see their own cameras
+      operationId: listCameras
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: List of cameras
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Camera'
+    
+    post:
+      tags: [Cameras]
+      summary: Create a camera
+      description: Rate limited to 2 cameras per minute
+      operationId: createCamera
+      security:
+        - tokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCreate'
+      responses:
+        '201':
+          description: Camera created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  
+  /api/cameras/{id}/:
+    get:
+      tags: [Cameras]
+      summary: Get camera details
+      operationId: getCamera
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      responses:
+        '200':
+          description: Camera details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+    
+    put:
+      tags: [Cameras]
+      summary: Update camera
+      operationId: updateCamera
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCreate'
+      responses:
+        '200':
+          description: Camera updated
+    
+    delete:
+      tags: [Cameras]
+      summary: Delete camera
+      operationId: deleteCamera
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      responses:
+        '204':
+          description: Camera deleted
+  
+  /api/cameras/{id}/test/:
+    post:
+      tags: [Cameras]
+      summary: Test camera connection
+      operationId: testCamera
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      responses:
+        '200':
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraTestResult'
+  
+  /api/cameras/{id}/health/:
+    get:
+      tags: [Cameras]
+      summary: Get camera health status
+      operationId: getCameraHealth
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      responses:
+        '200':
+          description: Health status and logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  camera:
+                    $ref: '#/components/schemas/CameraStatus'
+                  recent_logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CameraHealthLog'
+  
+  /api/cameras/{id}/calibrate/:
+    post:
+      tags: [Cameras]
+      summary: Set camera calibration data
+      operationId: calibrateCamera
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCalibration'
+      responses:
+        '200':
+          description: Calibration updated
+        '400':
+          description: Camera must be online
+    
+    get:
+      tags: [Cameras]
+      summary: Get camera calibration status
+      operationId: getCameraCalibration
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CameraId'
+      responses:
+        '200':
+          description: Calibration data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  camera_id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  is_calibrated:
+                    type: boolean
+                  calibration_data:
+                    type: object
+  
+  /api/cameras/status_overview/:
+    get:
+      tags: [Cameras]
+      summary: Get overview of all camera statuses
+      operationId: getCameraStatusOverview
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: Status overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overview:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      online:
+                        type: integer
+                      offline:
+                        type: integer
+                      error:
+                        type: integer
+                      calibrated:
+                        type: integer
+                      active_streams:
+                        type: integer
+                  cameras_by_status:
+                    type: object
+  
+  /api/streams/:
+    get:
+      tags: [Cameras]
+      summary: List streams
+      operationId: listStreams
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: List of streams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stream'
+  
+  /api/streams/attach/:
+    post:
+      tags: [Cameras]
+      summary: Attach camera to game (start streaming)
+      description: Rate limited to 10 per minute
+      operationId: attachStream
+      security:
+        - tokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StreamAttach'
+      responses:
+        '201':
+          description: Stream created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stream'
+        '400':
+          description: Camera not available or game not in progress
+  
+  /api/streams/{id}/detach/:
+    delete:
+      tags: [Cameras]
+      summary: Detach stream (stop streaming)
+      operationId: detachStream
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StreamId'
+      responses:
+        '200':
+          description: Stream stopped
+        '400':
+          description: Stream not active
+  
+  /api/streams/{id}/status/:
+    get:
+      tags: [Cameras]
+      summary: Get stream status
+      operationId: getStreamStatus
+      security:
+        - tokenAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StreamId'
+      responses:
+        '200':
+          description: Stream status
+  
+  /api/streams/active/:
+    get:
+      tags: [Cameras]
+      summary: Get all active streams
+      operationId: getActiveStreams
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: Active streams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stream'
+  
+  /api/camera-health/:
+    get:
+      tags: [Cameras]
+      summary: List camera health logs
+      operationId: listCameraHealthLogs
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: Health logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CameraHealthLog'
+
+# ═══════════════════════════════════════════════════════════════════════════
+# COMPONENTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+components:
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication. Prefix with "Token "
+
+  parameters:
+    GameId:
+      name: id
+      in: path
+      required: true
+      description: Game unique identifier
+      schema:
+        type: string
+        format: uuid
+    
+    TournamentId:
+      name: id
+      in: path
+      required: true
+      description: Tournament unique identifier
+      schema:
+        type: string
+        format: uuid
+    
+    CameraId:
+      name: id
+      in: path
+      required: true
+      description: Camera unique identifier
+      schema:
+        type: string
+        format: uuid
+    
+    StreamId:
+      name: id
+      in: path
+      required: true
+      description: Stream unique identifier
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Authentication required"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Not found."
+    
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Request was throttled."
+
+  schemas:
+    # ─────────────────────────────────────────────────────────────────────────
+    # User & Authentication Schemas
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    UserCreate:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 5
+    
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        elo_rating:
+          type: integer
+          default: 1200
+        games_played:
+          type: integer
+        games_won:
+          type: integer
+        games_lost:
+          type: integer
+        games_drawn:
+          type: integer
+        is_guest:
+          type: boolean
+    
+    UserProfile:
+      type: object
+      properties:
+        username:
+          type: string
+        elo_rating:
+          type: integer
+        games_played:
+          type: integer
+        games_won:
+          type: integer
+        games_lost:
+          type: integer
+        games_drawn:
+          type: integer
+    
+    UserStats:
+      type: object
+      properties:
+        elo_rating:
+          type: integer
+        games_played:
+          type: integer
+        games_won:
+          type: integer
+        games_lost:
+          type: integer
+        games_drawn:
+          type: integer
+        win_rate:
+          type: number
+          format: float
+          description: Win percentage (0-100)
+        draw_rate:
+          type: number
+          format: float
+          description: Draw percentage (0-100)
+    
+    GuestResponse:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "guest_abc12345"
+        token:
+          type: string
+          description: Authentication token
+        is_guest:
+          type: boolean
+          example: true
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Game Schemas
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    Game:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        white_player:
+          $ref: '#/components/schemas/User'
+        black_player:
+          $ref: '#/components/schemas/User'
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, IN_PROGRESS, FINISHED]
+        result:
+          type: string
+          enum: [WHITE_WIN, BLACK_WIN, DRAW]
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        fen_string:
+          type: string
+          description: Current board position in FEN notation
+          example: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        moves:
+          type: array
+          items:
+            $ref: '#/components/schemas/Move'
+    
+    Move:
+      type: object
+      properties:
+        id:
+          type: integer
+        move_number:
+          type: integer
+        move_san:
+          type: string
+          description: Move in Standard Algebraic Notation
+          example: "e4"
+        fen_after:
+          type: string
+          description: Board position after this move
+        created_at:
+          type: string
+          format: date-time
+    
+    MoveRequest:
+      type: object
+      required: [move_san, fen_after]
+      properties:
+        move_san:
+          type: string
+          description: Move in Standard Algebraic Notation
+          example: "Nf3"
+        fen_after:
+          type: string
+          description: Board position after the move
+          example: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Matchmaking Schemas
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    MatchmakingQueueEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          type: string
+        joined_at:
+          type: string
+          format: date-time
+        preferred_color:
+          type: string
+          enum: [WHITE, BLACK, ANY]
+        is_guest:
+          type: boolean
+    
+    MatchFound:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "match_found"
+        game_id:
+          type: string
+          format: uuid
+        color:
+          type: string
+          enum: [WHITE, BLACK]
+        opponent:
+          type: string
+          description: Opponent's username
+        opponent_color:
+          type: string
+          enum: [WHITE, BLACK]
+    
+    QueuedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "queued"
+        queue_id:
+          type: integer
+        preferred_color:
+          type: string
+        rating:
+          type: integer
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Tournament Schemas
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    Tournament:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        format:
+          type: string
+          enum: [SWISS, ROUND_ROBIN, SINGLE_ELIMINATION]
+        status:
+          type: string
+          enum: [REGISTRATION, IN_PROGRESS, COMPLETED, CANCELLED]
+        max_participants:
+          type: integer
+        participant_count:
+          type: integer
+        is_full:
+          type: boolean
+        join_code:
+          type: string
+          description: Unique code for joining
+        is_public:
+          type: boolean
+        created_by:
+          type: integer
+        created_by_username:
+          type: string
+        registration_deadline:
+          type: string
+          format: date-time
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
+        current_round:
+          type: integer
+        total_rounds:
+          type: integer
+        time_control:
+          type: string
+          description: Time control (e.g., "10+5" for 10min+5sec)
+        can_start:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    TournamentCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        format:
+          type: string
+          enum: [SWISS, ROUND_ROBIN, SINGLE_ELIMINATION]
+          default: SWISS
+        max_participants:
+          type: integer
+          default: 32
+        is_public:
+          type: boolean
+          default: true
+        registration_deadline:
+          type: string
+          format: date-time
+        time_control:
+          type: string
+    
+    TournamentParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tournament:
+          type: string
+          format: uuid
+        user:
+          type: integer
+        username:
+          type: string
+        user_rating:
+          type: integer
+        seed:
+          type: integer
+          nullable: true
+        initial_rating:
+          type: integer
+        score:
+          type: number
+          format: float
+        tiebreak_scores:
+          type: object
+        is_active:
+          type: boolean
+        joined_at:
+          type: string
+          format: date-time
+    
+    TournamentRound:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tournament:
+          type: string
+          format: uuid
+        round_number:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED]
+        start_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
+        pairing_count:
+          type: integer
+        completed_games:
+          type: integer
+        is_complete:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    TournamentPairing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        round:
+          type: string
+          format: uuid
+        round_number:
+          type: integer
+        tournament_name:
+          type: string
+        white_player:
+          type: integer
+          nullable: true
+        white_player_username:
+          type: string
+        black_player:
+          type: integer
+          nullable: true
+        black_player_username:
+          type: string
+        bye_player:
+          type: integer
+          nullable: true
+        bye_player_username:
+          type: string
+        game:
+          type: string
+          format: uuid
+          nullable: true
+        result:
+          type: string
+          enum: [WHITE_WIN, BLACK_WIN, DRAW, BYE]
+          nullable: true
+        board_number:
+          type: integer
+          nullable: true
+        is_bye:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    TournamentStanding:
+      type: object
+      properties:
+        position:
+          type: integer
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        score:
+          type: number
+          format: float
+        games_played:
+          type: integer
+        wins:
+          type: integer
+        draws:
+          type: integer
+        losses:
+          type: integer
+        tiebreak_scores:
+          type: object
+          description: Tiebreaker scores (Buchholz, SB, etc.)
+        initial_rating:
+          type: integer
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Camera & Stream Schemas
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    Camera:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        camera_type:
+          type: string
+        connection_url:
+          type: string
+        ip_address:
+          type: string
+        port:
+          type: integer
+        username:
+          type: string
+        location:
+          type: string
+        is_active:
+          type: boolean
+        status:
+          type: string
+          enum: [ONLINE, OFFLINE, ERROR, CALIBRATING]
+        last_health_check:
+          type: string
+          format: date-time
+          nullable: true
+        calibration_data:
+          type: object
+          nullable: true
+        is_calibrated:
+          type: boolean
+        created_by:
+          type: integer
+        created_by_username:
+          type: string
+        is_online:
+          type: boolean
+        current_stream:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            game_id:
+              type: string
+              format: uuid
+            is_active:
+              type: boolean
+            started_at:
+              type: string
+              format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    CameraCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        camera_type:
+          type: string
+        connection_url:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        location:
+          type: string
+    
+    CameraStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        location:
+          type: string
+        status:
+          type: string
+        is_online:
+          type: boolean
+        last_health_check:
+          type: string
+          format: date-time
+        is_calibrated:
+          type: boolean
+        current_stream:
+          type: object
+          nullable: true
+        response_time:
+          type: number
+          nullable: true
+        error_message:
+          type: string
+    
+    CameraTestResult:
+      type: object
+      properties:
+        camera_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_healthy:
+          type: boolean
+        status:
+          type: string
+        response_time:
+          type: number
+        error_message:
+          type: string
+        tested_at:
+          type: string
+          format: date-time
+    
+    CameraCalibration:
+      type: object
+      required: [calibration_data]
+      properties:
+        calibration_data:
+          type: object
+          required: [corners, board_size, square_size]
+          properties:
+            corners:
+              type: array
+              description: Board corner coordinates
+            board_size:
+              type: integer
+              description: Board size (usually 8)
+            square_size:
+              type: number
+              description: Square size in mm
+    
+    CameraHealthLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        camera:
+          type: string
+          format: uuid
+        camera_name:
+          type: string
+        status:
+          type: string
+        response_time:
+          type: number
+        error_message:
+          type: string
+          nullable: true
+        is_healthy:
+          type: boolean
+        checked_at:
+          type: string
+          format: date-time
+    
+    Stream:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        camera:
+          type: string
+          format: uuid
+        camera_name:
+          type: string
+        camera_location:
+          type: string
+        game:
+          type: string
+          format: uuid
+        game_info:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            white_player:
+              type: string
+            black_player:
+              type: string
+            status:
+              type: string
+        is_active:
+          type: boolean
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        quality_settings:
+          type: object
+        recording_enabled:
+          type: boolean
+        recording_path:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    StreamAttach:
+      type: object
+      required: [camera_id, game_id]
+      properties:
+        camera_id:
+          type: string
+          format: uuid
+        game_id:
+          type: string
+          format: uuid
+        quality_settings:
+          type: object
+        recording_enabled:
+          type: boolean
+          default: false
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Common Schemas
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+    
+    ValidationError:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string

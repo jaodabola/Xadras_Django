@@ -1,0 +1,20 @@
+/* App.css — apenas estrutura de layout global. Estilos de componentes ficam nos seus próprios ficheiros. */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  width: 100%;
+}
+
+/* Container centrado padrão */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}

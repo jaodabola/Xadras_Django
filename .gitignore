@@ -1,0 +1,217 @@
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+ssl/
+certs/
+nginx-ssl.conf
+
+# ===========================
+# Python
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+.ENV/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ---------------------------
+# Node.js / Frontend
+# ===========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.pnp.*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.nuxt/
+
+# Cache
+.cache/
+.parcel-cache/
+.vite/
+
+# ===========================
+# Django / Backend
+# ===========================
+*.log
+logs/
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Local settings
+local_settings.py
+
+# ===========================
+# IDEs & Editors
+# ===========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ===========================
+# OS Files
+# ===========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===========================
+# Docker
+# ===========================
+docker-compose.override.yml
+docker-compose-ssl.yml
+
+# ===========================
+# Production / Deployment
+# ===========================
+.pytest_cache/
+static/
+*.pid
+*.sock
+celerybeat-schedule
+celerybeat.pid
+
+# ===========================
+# Development Scripts
+# ===========================
+generate-ssl-certs.bat
+reset_db.bat
+setup-ssl-infrastructure.bat
+
+# ===========================
+# Tests
+# ===========================
+**/tests/
+**/*test*.py
+**/*spec*.py
+
+# ===========================
+# Nginx
+# ===========================
+nginx.conf
+nginx-ssl.conf
+frontend/nginx.conf
+
+# ===========================
+# Machine Learning / Models
+# ===========================
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.pickle
+*.joblib
+models/*.pt
+models/*.pth
+!models/.gitkeep
+
+# ===========================
+# Testing & Coverage
+# ===========================
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+__pycache__/
+
+# ===========================
+# Misc
+# ===========================
+*.bak
+*.tmp
+*.temp
+*.swp
+*.orig
+.cache/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Temporary files
+tmp/
+temp/

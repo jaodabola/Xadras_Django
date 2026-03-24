@@ -1,0 +1,86 @@
+/* ── MoveHistory ── */
+
+.move-history {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.125rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.move-history h3 {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--fg);
+  margin: 0 0 0.875rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.moves-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  max-height: 110px; /* Mostra cerca de 3 jogadas por vez */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.moves-container::-webkit-scrollbar { width: 5px; }
+.moves-container::-webkit-scrollbar-track { background: transparent; }
+.moves-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+.moves-container::-webkit-scrollbar-thumb:hover { background: #c0c0c0; }
+
+.move-pair {
+  display: flex;
+  align-items: center;
+  padding: 0.3125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+}
+
+.move-pair:hover { background: #fdf5e6; }
+
+.move-number {
+  font-weight: 600;
+  color: var(--muted-fg);
+  font-size: 0.8125rem;
+  min-width: 1.625rem;
+  text-align: right;
+  margin-right: 0.5rem;
+}
+
+.move {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: 1px solid transparent;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.move:hover { background: var(--muted); border-color: var(--border); }
+.move.current-move { background: #57463a; border-color: #57463a; color: #f0d9b5; font-weight: 700; }
+.move.current-move:hover { background: #6b5347; border-color: #6b5347; }
+
+.moves-container:empty::after {
+  content: 'Sem jogadas';
+  display: block;
+  text-align: center;
+  padding: 1.25rem 0;
+  color: var(--muted-fg);
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .move-history { max-height: 280px; }
+}

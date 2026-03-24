@@ -1,0 +1,64 @@
+/* ── GameControls ── */
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  width: 100%;
+}
+
+.control-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 50%; /* Circular */
+  background: var(--card);
+  color: var(--fg);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.control-button:hover:not(:disabled) {
+  background: var(--secondary);
+  border-color: #57463a;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.control-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.control-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.control-button.active {
+  background: #57463a;
+  border-color: #57463a;
+  color: #f0d9b5;
+}
+
+.control-button.active:hover:not(:disabled) {
+  background: #6b5347;
+  border-color: #6b5347;
+}
+
+@media (max-width: 480px) {
+  .game-controls { gap: 0.625rem; }
+  .control-button { width: 2.5rem; height: 2.5rem; font-size: 1.125rem; }
+}

@@ -32,6 +32,7 @@ class CustomUserSerializer(BaseUserSerializer):
             "win_rate",
             "draw_rate",
             "is_guest",
+            "avatar",
         )
 
         read_only_fields = (

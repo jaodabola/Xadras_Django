@@ -82,7 +82,16 @@ const Navbar: React.FC = () => {
           <div className="user-section">
             {user ? (
               <div className="user-menu">
-                <span className="username">{user.username}</span>
+                <Link to="/profile" className="username-link" title="Ver Perfil" onClick={closeMobile}>
+                  <div className="nav-avatar">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="Avatar" />
+                    ) : (
+                      <span>{user.username.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <span>{user.username}</span>
+                </Link>
                 <button onClick={handleLogout} className="logout-button">
                   Sair
                 </button>

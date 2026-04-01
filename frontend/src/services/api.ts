@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'http://192.168.1.8:8000/api';
 
 // Criar instância do axios com URL base
 const api = axios.create({
@@ -49,7 +49,7 @@ api.interceptors.response.use(
       data: error.response?.data,
       message: error.message
     });
-    
+
     if (error.response?.status === 401) {
       // Limpar dados de autenticação se recebermos 401
       localStorage.removeItem('token');
@@ -92,16 +92,16 @@ export const auth = {
   // Login regular
   login: async (username: string, password: string) => {
     try {
-      const response = await api.post('/token/login/', { 
-        username, 
-        password 
+      const response = await api.post('/token/login/', {
+        username,
+        password
       });
-      
+
       if (response.data.auth_token) {
         localStorage.setItem('token', response.data.auth_token);
         localStorage.setItem('username', username);
         localStorage.setItem('isGuest', 'false');
-        
+
         // Obter dados do utilizador
         const userResponse = await api.get('/users/me/');
         return { ...response.data, user: userResponse.data };
@@ -117,13 +117,13 @@ export const auth = {
   register: async (username: string, email: string, password: string) => {
     try {
       // Primeiro, criar o utilizador
-      const response = await api.post('/users/', { 
-        username, 
-        email, 
-        password, 
-        re_password: password 
+      const response = await api.post('/users/', {
+        username,
+        email,
+        password,
+        re_password: password
       });
-      
+
       if (response.status === 201) {
         // Após o registo bem-sucedido, fazer login
         try {
@@ -131,22 +131,22 @@ export const auth = {
         } catch (loginError) {
           // Se o login após o registo falhar, ainda assim considerar o registo bem-sucedido
           // mas informar o utilizador que precisa de fazer login manualmente
-          return { 
-            success: true, 
+          return {
+            success: true,
             message: 'Registo bem-sucedido! Por favor, faça login com as suas credenciais.',
             requiresLogin: true
           };
         }
       }
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Registration failed:', error.response?.data || error.message);
-      
+
       // Lidar com casos de erro específicos
       let errorMessage = 'Falha no registo';
       const errorData = error.response?.data || {};
-      
+
       if (errorData.username) {
         errorMessage = `Username: ${Array.isArray(errorData.username) ? errorData.username.join(' ') : errorData.username}`;
       } else if (errorData.email) {
@@ -154,11 +154,11 @@ export const auth = {
       } else if (errorData.password) {
         errorMessage = `Password: ${Array.isArray(errorData.password) ? errorData.password.join(' ') : errorData.password}`;
       } else if (errorData.non_field_errors) {
-        errorMessage = Array.isArray(errorData.non_field_errors) 
-          ? errorData.non_field_errors.join(' ') 
+        errorMessage = Array.isArray(errorData.non_field_errors)
+          ? errorData.non_field_errors.join(' ')
           : errorData.non_field_errors;
       }
-      
+
       throw { message: errorMessage, details: errorData };
     }
   },
@@ -184,13 +184,37 @@ export const auth = {
       throw error.response?.data || { message: 'Falha ao obter o perfil do utilizador' };
     }
   },
+
+  // Atualizar perfil do utilizador (incluindo Avatar)
+  updateProfile: async (data: { username?: string; email?: string } | FormData) => {
+    try {
+      const isFormData = data instanceof FormData;
+      const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+      
+      // Use PATCH instead of PUT for partial updates
+      const response = await api.patch('/users/me/', data, config);
+
+      // Se o username foi alterado com sucesso, atualizar localStorage
+      const updatedUsername = isFormData ? data.get('username') : data.username;
+      
+      if (updatedUsername && response.data.username) {
+        localStorage.setItem('username', response.data.username);
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to update user profile:', error.response?.data || error.message);
+      const errorData = error.response?.data || {};
+      throw { message: 'Falha ao atualizar o perfil. Verifica os dados e tenta novamente.', details: errorData };
+    }
+  },
 };
 
 export const matchmaking = {
   // Entrar na fila de jogo
   joinQueue: async (preferredColor: 'WHITE' | 'BLACK' | 'ANY' = 'ANY') => {
     try {
-      const response = await api.post('/matchmaking/join/', { preferred_color: preferredColor });
+      const response = await api.post('/matchmaking/', { preferred_color: preferredColor });
       return response.data;
     } catch (error) {
       console.error('Failed to join queue:', error);
@@ -201,7 +225,7 @@ export const matchmaking = {
   // Sair da fila de jogo
   leaveQueue: async () => {
     try {
-      await api.post('/matchmaking/leave/');
+      await api.post('/matchmaking/');
     } catch (error) {
       console.error('Failed to leave queue:', error);
       throw error;

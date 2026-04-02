@@ -36,6 +36,8 @@ const TournamentDetail: React.FC = () => {
     getParticipants,
     joinTournament,
     leaveTournament,
+    deleteTournament,
+    startTournament,
     generatePairings,
     assignBoards,
     startRound,
@@ -50,6 +52,7 @@ const TournamentDetail: React.FC = () => {
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'pairings' | 'standings'>('info');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Edit Mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -95,11 +98,11 @@ const TournamentDetail: React.FC = () => {
     if (!id) return;
     try {
       const tournament = await getTournament(id);
-      
+
       const participantsData = await getParticipants(id);
       setParticipants(participantsData);
-      
-      if (tournament.status !== 'PENDING') {
+
+      if (tournament.status !== 'REGISTRATION') {
         if ((tournament as any).pairings) {
           setPairings((tournament as any).pairings);
         }
@@ -132,7 +135,18 @@ const TournamentDetail: React.FC = () => {
     if (!id) return;
     try {
       setActionLoading('saving');
-      await updateTournament(id, editForm);
+
+      // Prepare data for update: convert empty strings to null for date fields
+      // This prevents 400 Bad Request errors from DRF DateTimeField
+      const dataToUpdate = {
+        ...editForm,
+        registration_deadline: editForm.registration_deadline || null,
+        start_date: editForm.start_date || null,
+        // Also handle time_control if empty
+        time_control: editForm.time_control || null
+      };
+
+      await updateTournament(id, dataToUpdate);
       setIsEditing(false);
     } catch (err) {
       console.error('Error updating tournament:', err);
@@ -145,6 +159,9 @@ const TournamentDetail: React.FC = () => {
     if (!id) return;
     try {
       setActionLoading('generate_pairings');
+      // Step 1: Start the tournament (REGISTRATION -> IN_PROGRESS, assigns seeds)
+      await startTournament(id);
+      // Step 2: Generate pairings for the first round
       await generatePairings(id);
       await loadTournamentData();
       setActiveTab('pairings');
@@ -186,9 +203,23 @@ const TournamentDetail: React.FC = () => {
     }
   };
 
+  const handleDeleteTournament = async () => {
+    if (!id) return;
+    try {
+      setActionLoading('deleting');
+      await deleteTournament(id);
+      navigate('/tournaments');
+    } catch (err) {
+      console.error('Error deleting tournament:', err);
+    } finally {
+      setActionLoading(null);
+      setShowDeleteModal(false);
+    }
+  };
+
   const isOrganizer = user && selectedTournament && selectedTournament.created_by === user.id;
   const isParticipant = user && participants.some((p: any) => p.user === user.id);
-  const canJoin = user && selectedTournament && !isParticipant && selectedTournament.status === 'PENDING' && selectedTournament.participant_count < selectedTournament.max_participants;
+  const canJoin = user && selectedTournament && !isParticipant && selectedTournament.status === 'REGISTRATION' && selectedTournament.participant_count < selectedTournament.max_participants;
 
   if (loading && !selectedTournament) {
     return (
@@ -215,19 +246,21 @@ const TournamentDetail: React.FC = () => {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusClasses = {
-      'PENDING': 'status-pending',
+    const statusClasses: Record<string, string> = {
+      'REGISTRATION': 'status-pending',
       'IN_PROGRESS': 'status-in-progress',
-      'COMPLETED': 'status-completed'
+      'FINISHED': 'status-completed',
+      'CANCELLED': 'status-completed'
     };
-    const statusLabels = {
-      'PENDING': 'Próximo',
+    const statusLabels: Record<string, string> = {
+      'REGISTRATION': 'Inscrições Abertas',
       'IN_PROGRESS': 'A Decorrer',
-      'COMPLETED': 'Terminado'
+      'FINISHED': 'Terminado',
+      'CANCELLED': 'Cancelado'
     };
     return (
-      <span className={`status-badge ${statusClasses[status as keyof typeof statusClasses]}`}>
-        {statusLabels[status as keyof typeof statusLabels]}
+      <span className={`status-badge ${statusClasses[status] || ''}`}>
+        {statusLabels[status] || status}
       </span>
     );
   };
@@ -252,7 +285,7 @@ const TournamentDetail: React.FC = () => {
         <button className="back-button" onClick={() => navigate('/tournaments')}>
           <span className="icon">←</span> Voltar aos Torneios
         </button>
-        
+
         {/* Error Display */}
         {error && (
           <div className="error-banner animate-fade-in">
@@ -273,7 +306,7 @@ const TournamentDetail: React.FC = () => {
                 <input
                   type="text"
                   value={editForm.name}
-                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                   className="game-input"
                 />
               </div>
@@ -284,9 +317,9 @@ const TournamentDetail: React.FC = () => {
                   <label>Formato</label>
                   <select
                     value={editForm.tournament_type}
-                    onChange={e => setEditForm({...editForm, tournament_type: e.target.value})}
+                    onChange={e => setEditForm({ ...editForm, tournament_type: e.target.value })}
                     className="game-select"
-                    disabled={selectedTournament.status !== 'PENDING'}
+                    disabled={selectedTournament.status !== 'REGISTRATION'}
                   >
                     <option value="SWISS">Sistema Suíço</option>
                     <option value="ROUND_ROBIN">Todos Contra Todos</option>
@@ -299,9 +332,9 @@ const TournamentDetail: React.FC = () => {
                     type="number"
                     min="2" max="256"
                     value={editForm.max_participants}
-                    onChange={e => setEditForm({...editForm, max_participants: parseInt(e.target.value)})}
+                    onChange={e => setEditForm({ ...editForm, max_participants: parseInt(e.target.value) })}
                     className="game-input"
-                    disabled={selectedTournament.status !== 'PENDING'}
+                    disabled={selectedTournament.status !== 'REGISTRATION'}
                   />
                 </div>
               </div>
@@ -312,7 +345,7 @@ const TournamentDetail: React.FC = () => {
                   <label>Controlo de Tempo</label>
                   <select
                     value={editForm.time_control}
-                    onChange={e => setEditForm({...editForm, time_control: e.target.value})}
+                    onChange={e => setEditForm({ ...editForm, time_control: e.target.value })}
                     className="game-select"
                   >
                     <option value="">Selecionar...</option>
@@ -335,7 +368,7 @@ const TournamentDetail: React.FC = () => {
                     type="number"
                     min="0" max="60"
                     value={editForm.increment}
-                    onChange={e => setEditForm({...editForm, increment: parseInt(e.target.value) || 0})}
+                    onChange={e => setEditForm({ ...editForm, increment: parseInt(e.target.value) || 0 })}
                     className="game-input"
                   />
                 </div>
@@ -348,7 +381,7 @@ const TournamentDetail: React.FC = () => {
                   <input
                     type="datetime-local"
                     value={editForm.registration_deadline}
-                    onChange={e => setEditForm({...editForm, registration_deadline: e.target.value})}
+                    onChange={e => setEditForm({ ...editForm, registration_deadline: e.target.value })}
                     className="game-input"
                   />
                 </div>
@@ -357,7 +390,7 @@ const TournamentDetail: React.FC = () => {
                   <input
                     type="datetime-local"
                     value={editForm.start_date}
-                    onChange={e => setEditForm({...editForm, start_date: e.target.value})}
+                    onChange={e => setEditForm({ ...editForm, start_date: e.target.value })}
                     className="game-input"
                   />
                 </div>
@@ -370,7 +403,7 @@ const TournamentDetail: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={editForm.is_public}
-                      onChange={e => setEditForm({...editForm, is_public: e.target.checked})}
+                      onChange={e => setEditForm({ ...editForm, is_public: e.target.checked })}
                       className="toggle-checkbox"
                     />
                     <span className="toggle-text">🌐 Torneio Público</span>
@@ -382,7 +415,7 @@ const TournamentDetail: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={editForm.vision_enabled}
-                      onChange={e => setEditForm({...editForm, vision_enabled: e.target.checked})}
+                      onChange={e => setEditForm({ ...editForm, vision_enabled: e.target.checked })}
                       className="toggle-checkbox"
                     />
                     <span className="toggle-text">📹 Vision AI Ativado</span>
@@ -396,14 +429,14 @@ const TournamentDetail: React.FC = () => {
                 <label>Descrição</label>
                 <textarea
                   value={editForm.description}
-                  onChange={e => setEditForm({...editForm, description: e.target.value})}
+                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
                   className="game-input textarea"
                   rows={3}
                   placeholder="Descreve o torneio, regras especiais, prémios..."
                 />
               </div>
 
-              {selectedTournament.status !== 'PENDING' && (
+              {selectedTournament.status !== 'REGISTRATION' && (
                 <div className="edit-warning">
                   ⚠️ Formato e capacidade não podem ser alterados após o torneio ter começado.
                 </div>
@@ -423,11 +456,11 @@ const TournamentDetail: React.FC = () => {
                   <h1>{selectedTournament.name}</h1>
                   {getStatusBadge(selectedTournament.status)}
                 </div>
-                
+
                 {/* Global Actions */}
                 <div className="header-global-actions">
                   {(canJoin || isParticipant) && (
-                    <button 
+                    <button
                       className={`btn ${isParticipant ? 'btn-danger' : 'btn-primary'} join-btn`}
                       onClick={handleJoinLeave}
                       disabled={actionLoading === 'join_leave'}
@@ -438,15 +471,29 @@ const TournamentDetail: React.FC = () => {
                     </button>
                   )}
                   {isOrganizer && (
-                    <button className="btn btn-outline edit-btn" onClick={() => setIsEditing(true)}>
-                      ✏️ Editar Info
+                    <button
+                      className="btn btn-outline btn-icon"
+                      onClick={() => setIsEditing(true)}
+                      title="Editar Torneio"
+                    >
+                      ✏️
+                    </button>
+                  )}
+                  {isOrganizer && (
+                    <button
+                      className="btn btn-danger-outline btn-icon"
+                      onClick={() => setShowDeleteModal(true)}
+                      disabled={actionLoading !== null}
+                      title="Apagar Torneio"
+                    >
+                      🗑
                     </button>
                   )}
                 </div>
               </div>
-              
+
               <p className="description">{selectedTournament.description || "Nenhuma descrição fornecida."}</p>
-              
+
               <div className="tournament-meta-pills">
                 <div className="meta-pill">
                   <span className="meta-icon">👑</span>
@@ -487,21 +534,21 @@ const TournamentDetail: React.FC = () => {
                     <h3>🛠️ Painel de Gestão Direta</h3>
                   </div>
                   <div className="control-buttons">
-                    {selectedTournament.status === 'PENDING' && (
+                    {selectedTournament.status === 'REGISTRATION' && (
                       <div className="control-action-group">
                         <button
                           className="btn btn-primary glow-btn"
                           onClick={handleGeneratePairings}
                           disabled={actionLoading !== null || selectedTournament.participant_count < 2}
                         >
-                          {actionLoading === 'generate_pairings' ? <LoadingSpinner size="small" /> : '🎲 Gerar Emparelhamentos e Arrancar'}
+                          {actionLoading === 'generate_pairings' ? <LoadingSpinner size="small" /> : '▶ Iniciar Torneio e Gerar 1ª Ronda'}
                         </button>
                         {selectedTournament.participant_count < 2 && (
                           <span className="help-text-inline">São necessários pelo menos 2 participantes para iniciar.</span>
                         )}
                       </div>
                     )}
-                    
+
                     {selectedTournament.status === 'IN_PROGRESS' && pairings.length > 0 && (
                       <div className="control-action-group">
                         <button
@@ -626,7 +673,7 @@ const TournamentDetail: React.FC = () => {
                 <div className="empty-state">
                   <div className="empty-icon">🎯</div>
                   <p>Ainda não existem rondas criadas.</p>
-                  {isOrganizer && selectedTournament.status === 'PENDING' && (
+                  {isOrganizer && selectedTournament.status === 'REGISTRATION' && (
                     <p className="help-text">Utiliza o botão "Gerar Emparelhamentos" acima para iniciar!</p>
                   )}
                 </div>
@@ -676,6 +723,38 @@ const TournamentDetail: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Modal de confirmação para apagar */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-icon">🗑️</div>
+            <h3>Apagar Torneio</h3>
+            <p>
+              Tem a certeza que pretende apagar o torneio{' '}
+              <strong>{selectedTournament?.name}</strong>?
+            </p>
+            <div className="modal-warning-text">
+              ⚠️ Esta ação é irreversível. Todos os dados, participantes e histórico de jogos associados serão permanentemente eliminados.
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-delete-cancel"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={actionLoading === 'deleting'}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-delete-confirm"
+                onClick={handleDeleteTournament}
+                disabled={actionLoading === 'deleting'}
+              >
+                {actionLoading === 'deleting' ? <LoadingSpinner size="small" /> : '🗑 Apagar Definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

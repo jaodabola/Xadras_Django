@@ -178,10 +178,10 @@ class TournamentViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             # Update tournament status
             tournament.status = Tournament.IN_PROGRESS
-            tournament.start_time = timezone.now()
+            tournament.start_date = timezone.now()
             
             # Calculate total rounds for Swiss system
-            if tournament.format == Tournament.SWISS:
+            if tournament.tournament_type == Tournament.SWISS:
                 participant_count = tournament.participant_count
                 if participant_count >= 2:
                     import math

@@ -14,6 +14,7 @@ class TournamentSerializer(serializers.ModelSerializer):
     is_full = serializers.ReadOnlyField()
     can_start = serializers.ReadOnlyField()
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    pairings = serializers.SerializerMethodField()
     
     class Meta:
         model = Tournament
@@ -23,9 +24,17 @@ class TournamentSerializer(serializers.ModelSerializer):
             'join_code', 'is_public', 'vision_enabled', 'created_by', 'created_by_username',
             'registration_deadline', 'start_date', 'end_time',
             'current_round', 'total_rounds', 'time_control', 'increment',
-            'can_start', 'created_at', 'updated_at'
+            'can_start', 'created_at', 'updated_at', 'pairings'
         ]
         read_only_fields = ['id', 'join_code', 'created_by', 'created_at', 'updated_at']
+        
+    def get_pairings(self, obj):
+        if obj.status == 'REGISTRATION' or obj.current_round == 0:
+            return []
+        round_obj = obj.rounds.filter(round_number=obj.current_round).first()
+        if round_obj:
+            return [p.to_dict() for p in round_obj.pairings.all()]
+        return []
     
     def create(self, validated_data):
         """Create tournament with current user as organizer"""

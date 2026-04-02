@@ -8,7 +8,7 @@ interface Tournament {
   description: string;
   max_participants: number;
   participant_count: number;
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  status: 'REGISTRATION' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
   created_by: number;
   created_by_username: string;
   participants: any[];
@@ -33,9 +33,11 @@ interface TournamentContextType {
   getParticipants: (tournamentId: string) => Promise<any[]>;
   joinTournament: (tournamentId: string) => Promise<void>;
   leaveTournament: (tournamentId: string) => Promise<void>;
+  deleteTournament: (tournamentId: string) => Promise<void>;
   getTournament: (tournamentId: string) => Promise<Tournament>;
   
   // Tournament operations
+  startTournament: (tournamentId: string) => Promise<void>;
   generatePairings: (tournamentId: string) => Promise<void>;
   assignBoards: (tournamentId: string, assignments: any) => Promise<void>;
   startRound: (tournamentId: string) => Promise<void>;
@@ -167,6 +169,43 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Delete tournament
+  const deleteTournament = async (tournamentId: string) => {
+    try {
+      setError(null);
+      await api.delete(`/tournaments/${tournamentId}/`);
+      setTournaments(prev => prev.filter(t => t.id !== tournamentId));
+      if (selectedTournament?.id === tournamentId) {
+        setSelectedTournament(null);
+      }
+    } catch (err: any) {
+      console.error('Error deleting tournament:', err);
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Falha ao apagar o torneio';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Start tournament (REGISTRATION -> IN_PROGRESS, assigns seeds)
+  const startTournament = async (tournamentId: string) => {
+    try {
+      setError(null);
+      const response = await api.post(`/tournaments/${tournamentId}/start/`);
+      const updatedTournament = response.data;
+      setTournaments(prev =>
+        prev.map(t => t.id === tournamentId ? updatedTournament : t)
+      );
+      if (selectedTournament?.id === tournamentId) {
+        setSelectedTournament(updatedTournament);
+      }
+    } catch (err: any) {
+      console.error('Error starting tournament:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to start tournament';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
   // Generate tournament pairings (Swiss algorithm)
   const generatePairings = async (tournamentId: string) => {
     try {
@@ -256,7 +295,9 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
         getParticipants,
         joinTournament,
         leaveTournament,
+        deleteTournament,
         getTournament,
+        startTournament,
         generatePairings,
         assignBoards,
         startRound,

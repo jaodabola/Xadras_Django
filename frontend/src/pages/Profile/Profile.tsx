@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './Profile.css';
 
@@ -87,6 +88,7 @@ const Profile: React.FC = () => {
   };
 
   if (!user) return null;
+  if (user.isGuest) return <Navigate to="/" replace />;
 
   return (
     <div className="profile-container">

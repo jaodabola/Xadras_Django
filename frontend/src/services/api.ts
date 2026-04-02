@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.1.8:8000/api';
+const API_URL = `http://${window.location.hostname}:8000/api`;
 
 // Criar instância do axios com URL base
 const api = axios.create({

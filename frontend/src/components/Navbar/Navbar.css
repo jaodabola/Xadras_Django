@@ -105,10 +105,13 @@
   font-weight: 500;
   color: var(--fg);
   text-decoration: none;
+}
+
+.username-text {
   transition: color 0.15s ease;
 }
 
-.username-link:hover {
+.username-link:hover .username-text {
   text-decoration: underline;
   color: #57463a;
 }

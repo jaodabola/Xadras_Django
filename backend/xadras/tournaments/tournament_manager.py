@@ -58,7 +58,7 @@ class TournamentManager:
         with transaction.atomic():
             # Update tournament status
             self.tournament.status = Tournament.IN_PROGRESS
-            self.tournament.start_time = timezone.now()
+            self.tournament.start_date = timezone.now()
             
             # Calculate total rounds based on format
             self._calculate_total_rounds()
@@ -311,15 +311,15 @@ class TournamentManager:
         """Calculate total rounds based on tournament format and participants"""
         participant_count = self.tournament.participant_count
         
-        if self.tournament.format == Tournament.SWISS:
+        if self.tournament.tournament_type == Tournament.SWISS:
             # Swiss: ceil(log2(participants)) rounds
             import math
             self.tournament.total_rounds = max(1, math.ceil(math.log2(participant_count)))
-        elif self.tournament.format == Tournament.SINGLE_ELIMINATION:
+        elif self.tournament.tournament_type == Tournament.SINGLE_ELIMINATION:
             # Single elimination: ceil(log2(participants)) rounds
             import math
             self.tournament.total_rounds = max(1, math.ceil(math.log2(participant_count)))
-        elif self.tournament.format == Tournament.ROUND_ROBIN:
+        elif self.tournament.tournament_type == Tournament.ROUND_ROBIN:
             # Round robin: n-1 rounds for n players (or n if odd)
             self.tournament.total_rounds = participant_count - 1 if participant_count % 2 == 0 else participant_count
     
@@ -335,16 +335,16 @@ class TournamentManager:
         """Generate pairings based on tournament format"""
         tournament_id = str(self.tournament.id)
         
-        if self.tournament.format == Tournament.SWISS:
+        if self.tournament.tournament_type == Tournament.SWISS:
             return generate_swiss_pairings(tournament_id, round_number)
-        elif self.tournament.format == Tournament.SINGLE_ELIMINATION:
+        elif self.tournament.tournament_type == Tournament.SINGLE_ELIMINATION:
             return generate_elimination_pairings(tournament_id, round_number)
-        elif self.tournament.format == Tournament.ROUND_ROBIN:
+        elif self.tournament.tournament_type == Tournament.ROUND_ROBIN:
             # For round robin, we need to get the specific round from all rounds
             all_rounds = generate_round_robin_pairings(tournament_id)
             return all_rounds.get(round_number, [])
         else:
-            raise ValueError(f"Unsupported tournament format: {self.tournament.format}")
+            raise ValueError(f"Unsupported tournament format: {self.tournament.tournament_type}")
     
     def _create_pairing_from_data(self, tournament_round: TournamentRound, pairing_data: Dict, board_number: int) -> TournamentPairing:
         """Create a TournamentPairing object from pairing data"""
@@ -375,11 +375,11 @@ class TournamentManager:
     
     def _is_tournament_finished(self) -> bool:
         """Check if tournament should be finished"""
-        if self.tournament.format == Tournament.SINGLE_ELIMINATION:
+        if self.tournament.tournament_type == Tournament.SINGLE_ELIMINATION:
             # Tournament is finished when only one player remains
             active_participants = self.tournament.participants.filter(is_active=True).count()
             return active_participants <= 1
-        elif self.tournament.format in [Tournament.SWISS, Tournament.ROUND_ROBIN]:
+        elif self.tournament.tournament_type in [Tournament.SWISS, Tournament.ROUND_ROBIN]:
             # Tournament is finished when all planned rounds are complete
             return self.tournament.current_round >= self.tournament.total_rounds
         

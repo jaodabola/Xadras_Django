@@ -603,8 +603,8 @@ def generate_swiss_pairings(tournament_id: str, round_number: int) -> List[Dict]
     try:
         tournament = Tournament.objects.get(id=tournament_id)
         
-        if tournament.format != Tournament.SWISS:
-            raise ValueError(f"Tournament format is {tournament.format}, not Swiss")
+        if tournament.tournament_type != Tournament.SWISS:
+            raise ValueError(f"Tournament format is {tournament.tournament_type}, not Swiss")
         
         engine = SwissPairingEngine(tournament)
         return engine.generate_pairings(round_number)
@@ -627,8 +627,8 @@ def generate_elimination_pairings(tournament_id: str, round_number: int) -> List
     try:
         tournament = Tournament.objects.get(id=tournament_id)
         
-        if tournament.format != Tournament.SINGLE_ELIMINATION:
-            raise ValueError(f"Tournament format is {tournament.format}, not Single Elimination")
+        if tournament.tournament_type != Tournament.SINGLE_ELIMINATION:
+            raise ValueError(f"Tournament format is {tournament.tournament_type}, not Single Elimination")
         
         engine = SingleEliminationEngine(tournament)
         
@@ -654,8 +654,8 @@ def generate_round_robin_pairings(tournament_id: str) -> Dict[int, List[Dict]]:
     try:
         tournament = Tournament.objects.get(id=tournament_id)
         
-        if tournament.format != Tournament.ROUND_ROBIN:
-            raise ValueError(f"Tournament format is {tournament.format}, not Round Robin")
+        if tournament.tournament_type != Tournament.ROUND_ROBIN:
+            raise ValueError(f"Tournament format is {tournament.tournament_type}, not Round Robin")
         
         engine = RoundRobinEngine(tournament)
         return engine.generate_all_rounds()

@@ -61,7 +61,7 @@ const GameControls: React.FC<GameControlsProps> = ({
       <button 
         className="control-button" 
         onClick={onToggleFullscreen}
-        title={isFullscreen ? "Sair de tela cheia" : "Tela cheia"}
+        title={isFullscreen ? "Sair do ecrã inteiro" : "Ecrã inteiro"}
       >
         {isFullscreen ? <FaCompress /> : <FaExpand />}
       </button>

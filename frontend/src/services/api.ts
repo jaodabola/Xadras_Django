@@ -190,13 +190,13 @@ export const auth = {
     try {
       const isFormData = data instanceof FormData;
       const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
-      
+
       // Use PATCH instead of PUT for partial updates
       const response = await api.patch('/users/me/', data, config);
 
       // Se o username foi alterado com sucesso, atualizar localStorage
       const updatedUsername = isFormData ? data.get('username') : data.username;
-      
+
       if (updatedUsername && response.data.username) {
         localStorage.setItem('username', response.data.username);
       }
@@ -212,9 +212,12 @@ export const auth = {
 
 export const matchmaking = {
   // Entrar na fila de jogo
-  joinQueue: async (preferredColor: 'WHITE' | 'BLACK' | 'ANY' = 'ANY') => {
+  joinQueue: async (preferredColor: 'WHITE' | 'BLACK' | 'ANY' = 'ANY', timeControl: string = 'rapid') => {
     try {
-      const response = await api.post('/matchmaking/', { preferred_color: preferredColor });
+      const response = await api.post('/matchmaking/', {
+        preferred_color: preferredColor,
+        time_control: timeControl
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to join queue:', error);

@@ -89,8 +89,8 @@ class TournamentStandingsCalculator:
         
         return {
             'participant_id': participant.id,
-            'user_id': user.id,
-            'username': user.username,
+            'player_id': str(user.id),
+            'player_name': user.username,
             'score': participant.score,
             'games_played': games_played,
             'wins': wins,

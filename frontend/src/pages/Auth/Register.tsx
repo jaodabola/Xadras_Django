@@ -11,12 +11,12 @@ interface RegisterResponse {
 }
 
 const Register: React.FC = () => {
-  const [username, setUsername]               = useState('');
-  const [email, setEmail]                     = useState('');
-  const [password, setPassword]               = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError]                     = useState('');
-  const [isLoading, setIsLoading]             = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -90,7 +90,6 @@ const Register: React.FC = () => {
             <input
               id="username"
               type="text"
-              placeholder="Escolha um nome de utilizador"
               value={username}
               onChange={e => setUsername(e.target.value)}
               disabled={isLoading}
@@ -133,7 +132,6 @@ const Register: React.FC = () => {
             <input
               id="confirmPassword"
               type="password"
-              placeholder="Repita a palavra-passe"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               disabled={isLoading}

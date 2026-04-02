@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 
 interface MatchmakingContextType {
   isInQueue: boolean;
-  joinQueue: (preferredColor: 'WHITE' | 'BLACK' | 'ANY') => Promise<void>;
+  joinQueue: (preferredColor: 'WHITE' | 'BLACK' | 'ANY', timeControl: string) => Promise<void>;
   leaveQueue: () => Promise<void>;
   leaveGame: () => void;
   matchFound: boolean;
@@ -122,10 +122,10 @@ export const MatchmakingProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
   }, [isInQueue]); // Only depend on isInQueue to prevent infinite loops
 
-  const joinQueue = async (preferredColor: 'WHITE' | 'BLACK' | 'ANY' = 'ANY') => {
+  const joinQueue = async (preferredColor: 'WHITE' | 'BLACK' | 'ANY' = 'ANY', timeControl: string = 'rapid') => {
     try {
       setError(null);
-      const response = await matchmaking.joinQueue(preferredColor);
+      const response = await matchmaking.joinQueue(preferredColor, timeControl);
 
       // Backend variant A: immediate match_found response from join
       if (response && (response.match_found || response.status === 'match_found') && response.game_id) {

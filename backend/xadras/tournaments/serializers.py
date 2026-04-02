@@ -18,11 +18,11 @@ class TournamentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournament
         fields = [
-            'id', 'name', 'description', 'format', 'status',
+            'id', 'name', 'description', 'tournament_type', 'status',
             'max_participants', 'participant_count', 'is_full',
-            'join_code', 'is_public', 'created_by', 'created_by_username',
-            'registration_deadline', 'start_time', 'end_time',
-            'current_round', 'total_rounds', 'time_control',
+            'join_code', 'is_public', 'vision_enabled', 'created_by', 'created_by_username',
+            'registration_deadline', 'start_date', 'end_time',
+            'current_round', 'total_rounds', 'time_control', 'increment',
             'can_start', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'join_code', 'created_by', 'created_at', 'updated_at']
@@ -94,15 +94,19 @@ class TournamentStandingsSerializer(serializers.Serializer):
     """Serializer for tournament standings"""
     
     position = serializers.IntegerField()
-    user_id = serializers.UUIDField()
-    username = serializers.CharField()
+    participant_id = serializers.UUIDField()
+    player_id = serializers.CharField()
+    player_name = serializers.CharField()
     score = serializers.FloatField()
     games_played = serializers.IntegerField()
     wins = serializers.IntegerField()
     draws = serializers.IntegerField()
     losses = serializers.IntegerField()
-    tiebreak_scores = serializers.JSONField()
+    buchholz_score = serializers.FloatField()
+    sonneborn_berger_score = serializers.FloatField()
+    direct_encounter_score = serializers.FloatField()
     initial_rating = serializers.IntegerField()
+    seed = serializers.IntegerField(allow_null=True, required=False)
 
 
 class TournamentCreateSerializer(serializers.ModelSerializer):
@@ -111,8 +115,8 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournament
         fields = [
-            'name', 'description', 'format', 'max_participants',
-            'is_public', 'registration_deadline', 'time_control'
+            'name', 'description', 'tournament_type', 'max_participants',
+            'is_public', 'vision_enabled', 'registration_deadline', 'start_date', 'time_control', 'increment'
         ]
     
     def create(self, validated_data):

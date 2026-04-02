@@ -7,25 +7,25 @@ from .models import Tournament, TournamentParticipant, TournamentRound, Tourname
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'format', 'status', 'participant_count', 
+        'name', 'tournament_type', 'status', 'participant_count', 
         'max_participants', 'created_by', 'created_at'
     ]
-    list_filter = ['format', 'status', 'is_public', 'created_at']
+    list_filter = ['tournament_type', 'status', 'is_public', 'created_at']
     search_fields = ['name', 'join_code', 'created_by__username']
     readonly_fields = ['id', 'join_code', 'participant_count', 'created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'description', 'format', 'status')
+            'fields': ('name', 'description', 'tournament_type', 'status')
         }),
         ('Configuration', {
-            'fields': ('max_participants', 'is_public', 'join_code', 'time_control')
+            'fields': ('max_participants', 'is_public', 'vision_enabled', 'join_code', 'time_control', 'increment')
         }),
         ('Management', {
             'fields': ('created_by', 'current_round', 'total_rounds')
         }),
         ('Timing', {
-            'fields': ('registration_deadline', 'start_time', 'end_time')
+            'fields': ('registration_deadline', 'start_date', 'end_time')
         }),
         ('System', {
             'fields': ('id', 'created_at', 'updated_at'),

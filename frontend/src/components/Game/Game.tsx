@@ -233,7 +233,7 @@ const Game: React.FC = () => {
   // ... (all other hooks and logic) ...
 
   if (loading) {
-    return <div className="game-loading">Carregando partida...</div>;
+    return <div className="game-loading">A carregar partida...</div>;
   }
   if (error) {
     return <div className="game-error">{error}</div>;
@@ -257,12 +257,12 @@ const Game: React.FC = () => {
 
       if (isWhiteTurn && gameData.white_player?.id !== currentUser.id) {
         console.log('[Game] Move blocked - Not white\'s turn');
-        setTurnError('É a vez das brancas, mas você está jogando com as pretas');
+        setTurnError('São as brancas a jogar, mas está a jogar com as pretas');
         setTimeout(() => setTurnError(null), 5000);
         return false; // Block move completely - no chess.js execution
       } else if (!isWhiteTurn && gameData.black_player?.id !== currentUser.id) {
         console.log('[Game] Move blocked - Not black\'s turn');
-        setTurnError('É a vez das pretas, mas você está jogando com as brancas');
+        setTurnError('São as pretas a jogar, mas está a jogar com as brancas');
         setTimeout(() => setTurnError(null), 5000);
         return false; // Block move completely - no chess.js execution
       }
@@ -525,8 +525,8 @@ const Game: React.FC = () => {
 
         <div className="game-info">
           <div className="material-count">
-            <div>White Material: {calculateMaterial(capturedPieces.black)}</div>
-            <div>Black Material: {calculateMaterial(capturedPieces.white)}</div>
+            <div>Brancas: {calculateMaterial(capturedPieces.black)}</div>
+            <div>Pretas: {calculateMaterial(capturedPieces.white)}</div>
           </div>
 
           <MoveHistory

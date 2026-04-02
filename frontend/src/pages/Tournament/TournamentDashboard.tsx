@@ -35,7 +35,7 @@ const TournamentDashboard: React.FC = () => {
     return matchesFilter && matchesSearch;
   });
 
-  const handleJoinTournament = async (tournamentId: number) => {
+  const handleJoinTournament = async (tournamentId: string) => {
     try {
       await joinTournament(tournamentId);
     } catch (err) {
@@ -96,7 +96,7 @@ const TournamentDashboard: React.FC = () => {
       <div className="dashboard-header">
         <div className="header-content">
           <h1>Torneios</h1>
-          <p>Compita em torneios de xadrez organizados</p>
+          <p>Organize e participe em torneios de xadrez</p>
         </div>
         <div className="header-actions">
           <button
@@ -191,12 +191,12 @@ const TournamentDashboard: React.FC = () => {
                     <div className="stat-item">
                       <span className="stat-label">Participantes</span>
                       <span className="stat-value">
-                        {tournament.current_participants}/{tournament.max_participants}
+                        {tournament.participant_count}/{tournament.max_participants}
                       </span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-label">Criado por</span>
-                      <span className="stat-value">{tournament.created_by.username}</span>
+                      <span className="stat-value">{tournament.created_by_username}</span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-label">Data</span>
@@ -214,7 +214,7 @@ const TournamentDashboard: React.FC = () => {
                   </button>
 
                   {tournament.status === 'PENDING' &&
-                   tournament.current_participants < tournament.max_participants && (
+                   tournament.participant_count < tournament.max_participants && (
                     <button
                       className="btn btn-primary"
                       onClick={() => handleJoinTournament(tournament.id)}
@@ -224,14 +224,6 @@ const TournamentDashboard: React.FC = () => {
                     </button>
                   )}
 
-                  {tournament.created_by.id === user.id && (
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => navigate(`/tournaments/${tournament.id}/manage`)}
-                    >
-                      Gerir
-                    </button>
-                  )}
                 </div>
               </div>
             ))}

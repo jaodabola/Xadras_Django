@@ -6,7 +6,7 @@ import './Auth.css';
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, guestLogin } = useAuth();
   const navigate = useNavigate();
@@ -63,7 +63,6 @@ const Login: React.FC = () => {
             <input
               id="username"
               type="text"
-              placeholder="O seu utilizador"
               value={username}
               onChange={e => setUsername(e.target.value)}
               disabled={isLoading}
@@ -76,7 +75,6 @@ const Login: React.FC = () => {
             <input
               id="password"
               type="password"
-              placeholder="A sua palavra-passe"
               value={password}
               onChange={e => setPassword(e.target.value)}
               disabled={isLoading}

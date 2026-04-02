@@ -80,7 +80,8 @@
    HERO SECTION
    ═══════════════════════════════════════════════ */
 .hero-section {
-  padding: 3rem 1.5rem 4rem; /* Reduzido o padding vertical */
+  padding: 7rem 4rem 4rem;
+  /* Reduzido o padding vertical */
 }
 
 .hero-inner {
@@ -117,9 +118,11 @@
   border-radius: 9999px;
   background: var(--muted-bg);
   color: var(--muted-fg);
-  font-size: 0.84rem; /* ligeiramente menor */
+  font-size: 0.84rem;
+  /* ligeiramente menor */
   font-weight: 500;
-  margin-bottom: 1.25rem; /* reduzido */
+  margin-bottom: 1.25rem;
+  /* reduzido */
 }
 
 .badge-dot {
@@ -147,7 +150,8 @@
 
 .hero-title {
   font-family: var(--font-serif);
-  font-size: clamp(2rem, 5vw, 3.75rem); /* Reduzido o tamanho da fonte */
+  font-size: clamp(2rem, 5vw, 3.75rem);
+  /* Reduzido o tamanho da fonte */
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -161,9 +165,12 @@
 }
 
 .hero-subtitle {
-  margin-top: 1.25rem; /* Reduzido */
-  font-size: 1.05rem; /* Reduzido */
-  line-height: 1.6; /* Reduzido */
+  margin-top: 1.25rem;
+  /* Reduzido */
+  font-size: 1.05rem;
+  /* Reduzido */
+  line-height: 1.6;
+  /* Reduzido */
   color: var(--muted-fg);
   max-width: 36rem;
   margin-left: auto;
@@ -179,7 +186,8 @@
 
 /* ── CTA Buttons ── */
 .hero-cta {
-  margin-top: 1.75rem; /* Reduzido */
+  margin-top: 1.75rem;
+  /* Reduzido */
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -203,14 +211,17 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.75rem; /* Reduzido */
-  min-width: 10rem; /* Reduzido */
+  padding: 0.75rem 1.75rem;
+  /* Reduzido */
+  min-width: 10rem;
+  /* Reduzido */
   background: #57463a;
   color: #f0d9b5;
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
-  font-size: 0.95rem; /* Reduzido */
+  font-size: 0.95rem;
+  /* Reduzido */
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
@@ -233,14 +244,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.75rem; /* Reduzido */
-  min-width: 10rem; /* Reduzido */
+  padding: 0.75rem 1.75rem;
+  /* Reduzido */
+  min-width: 10rem;
+  /* Reduzido */
   background: transparent;
   color: var(--fg);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
-  font-size: 0.95rem; /* Reduzido */
+  font-size: 0.95rem;
+  /* Reduzido */
   font-weight: 500;
   cursor: pointer;
   text-decoration: none;
@@ -255,8 +269,10 @@
 
 /* ── Guest notice ── */
 .guest-notice {
-  margin-top: 1.25rem; /* Reduzido */
-  padding: 0.75rem 1.125rem; /* Reduzido */
+  margin-top: 1.25rem;
+  /* Reduzido */
+  padding: 0.75rem 1.125rem;
+  /* Reduzido */
   background: var(--muted-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -336,7 +352,8 @@
 .cb-board {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(8, 2.5rem); /* Reduzido de 3rem para 2.5rem */
+  grid-template-columns: repeat(8, 2.5rem);
+  /* Reduzido de 3rem para 2.5rem */
   grid-template-rows: repeat(8, 2.5rem);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -345,7 +362,8 @@
 }
 
 .cb-cell {
-  width: 2.5rem; /* Reduzido para corresponder à grelha */
+  width: 2.5rem;
+  /* Reduzido para corresponder à grelha */
   height: 2.5rem;
   display: flex;
   align-items: center;

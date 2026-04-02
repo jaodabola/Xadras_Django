@@ -46,7 +46,7 @@ class Tournament(models.Model):
     description = models.TextField(blank=True, help_text="Tournament description")
     
     # Tournament Configuration
-    format = models.CharField(max_length=20, choices=FORMAT_CHOICES, default=SWISS)
+    tournament_type = models.CharField(max_length=20, choices=FORMAT_CHOICES, default=SWISS)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=REGISTRATION)
     max_participants = models.IntegerField(
         validators=[MinValueValidator(2), MaxValueValidator(256)],
@@ -61,6 +61,7 @@ class Tournament(models.Model):
         help_text="Unique code for joining tournament"
     )
     is_public = models.BooleanField(default=True, help_text="Public tournaments appear in listings")
+    vision_enabled = models.BooleanField(default=False, help_text="Enable physical board tracking integration")
     
     # Management
     created_by = models.ForeignKey(
@@ -76,7 +77,7 @@ class Tournament(models.Model):
         blank=True,
         help_text="Deadline for registration"
     )
-    start_time = models.DateTimeField(
+    start_date = models.DateTimeField(
         null=True, 
         blank=True,
         help_text="Tournament start time"
@@ -96,9 +97,14 @@ class Tournament(models.Model):
     )
     
     # Time Control
-    time_control = models.JSONField(
-        default=dict,
-        help_text="Time control settings (minutes, increment, etc.)"
+    time_control = models.CharField(
+        max_length=50,
+        default="10+0",
+        help_text="Time control string (e.g. 10+0)"
+    )
+    increment = models.IntegerField(
+        default=0,
+        help_text="Increment added per move (seconds)"
     )
     
     # Timestamps
@@ -116,7 +122,7 @@ class Tournament(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.name} ({self.get_format_display()})"
+        return f"{self.name} ({self.get_tournament_type_display()})"
     
     def save(self, *args, **kwargs):
         # Generate join code if not provided

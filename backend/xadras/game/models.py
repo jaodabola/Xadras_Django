@@ -32,6 +32,17 @@ class Game(models.Model):
     black_player = models.ForeignKey(User, related_name='black_games', on_delete=models.CASCADE, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     result = models.CharField(max_length=20, choices=RESULT_CHOICES, null=True, blank=True)
+    time_control = models.CharField(
+        max_length=20,
+        choices=[
+            ('bullet', 'Bullet'),
+            ('blitz', 'Blitz'),
+            ('rapid', 'Rapid'),
+            ('classical', 'Classical'),
+            ('unlimited', 'Sem Tempo'),
+        ],
+        default='rapid'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     fen_string = models.TextField(default='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')

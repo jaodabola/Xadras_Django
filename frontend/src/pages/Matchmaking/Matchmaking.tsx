@@ -10,6 +10,7 @@ const TIME_CONTROLS = [
   { id: 'blitz', label: 'Blitz', time: '5 min', icon: '⏱', description: 'Jogos rápidos, cinco minutos cada' },
   { id: 'rapid', label: 'Rápido', time: '10 min', icon: '🕐', description: 'Ritmo padrão, dez minutos por lado' },
   { id: 'classical', label: 'Clássico', time: '30 min', icon: '♟', description: 'Tempo tradicional para jogo profundo' },
+  { id: 'unlimited', label: 'Sem Tempo', time: '∞', icon: '♾️', description: 'Jogar sem limite de tempo' },
 ] as const;
 
 type TimeControlId = typeof TIME_CONTROLS[number]['id'];
@@ -24,6 +25,7 @@ function SearchingTimer({ seconds }: { seconds: number }) {
 /* ─── Main component ─── */
 const Matchmaking: React.FC = () => {
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlId | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [preferredColor, setPreferredColor] = useState<'WHITE' | 'BLACK' | 'ANY'>('ANY');
   const [timeInQueue, setTimeInQueue] = useState(0);
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
@@ -58,7 +60,8 @@ const Matchmaking: React.FC = () => {
   }, [isInQueue]);
 
   const handleFindMatch = async () => {
-    try { await joinQueue(preferredColor); } catch (e) { console.error(e); }
+    if (!selectedTimeControl) return;
+    try { await joinQueue(preferredColor, selectedTimeControl); } catch (e) { console.error(e); }
   };
 
   const handleCancelSearch = async () => {
@@ -88,7 +91,7 @@ const Matchmaking: React.FC = () => {
         {/* Header */}
         <div className="card-header">
           <h2>Encontrar Jogo</h2>
-          <p className="subtitle">Selecione o ritmo de jogo e encontraremos um adversário.</p>
+          <p className="subtitle">Selecione o ritmo de jogo e o sistema encontrará um adversário adequado.</p>
         </div>
 
 
@@ -105,30 +108,58 @@ const Matchmaking: React.FC = () => {
             {/* Time control selection */}
             <div className="form-group">
               <label>Ritmo de jogo</label>
-              <div className="color-options" style={{ gridTemplateColumns: 'repeat(2,1fr)' }}>
-                {TIME_CONTROLS.map(tc => (
-                  <button
-                    key={tc.id}
-                    type="button"
-                    className={`color-option${selectedTimeControl === tc.id ? ' active' : ''}`}
-                    onClick={() => setSelectedTimeControl(tc.id)}
-                    style={{ flexDirection: 'row', justifyContent: 'flex-start', gap: '1rem', textAlign: 'left' }}
-                  >
-                    <span
-                      className="piece-icon random-piece"
-                      style={{ fontSize: '1.25rem', width: '2.5rem', height: '2.5rem', flexShrink: 0 }}
-                    >
-                      {tc.icon}
-                    </span>
-                    <span>
-                      <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem', marginBottom: '0.125rem' }}>
-                        <strong style={{ fontSize: '0.9375rem', color: 'var(--fg, #0f0f0f)' }}>{tc.label}</strong>
-                        <span style={{ fontSize: '0.8125rem', color: 'var(--muted-fg, #6b6b6b)' }}>{tc.time}</span>
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--muted-fg, #6b6b6b)' }}>{tc.description}</span>
-                    </span>
-                  </button>
-                ))}
+
+              <div className="custom-dropdown-container">
+                <button
+                  type="button"
+                  className={`custom-dropdown-trigger ${isDropdownOpen ? 'open' : ''} ${selectedTimeControl ? 'has-value' : ''}`}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                >
+                  {selectedTimeControl ? (
+                    (() => {
+                      const tc = TIME_CONTROLS.find(t => t.id === selectedTimeControl);
+                      return tc ? (
+                        <div className="selected-tc-content">
+                          <span className="tc-icon">{tc.icon}</span>
+                          <div className="tc-label">
+                            <strong>{tc.label}</strong>
+                            <span className="tc-time-muted">{tc.time}</span>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()
+                  ) : (
+                    <span className="dropdown-placeholder">Selecione o ritmo de jogo...</span>
+                  )}
+                  <div className={`dropdown-chevron ${isDropdownOpen ? 'open' : ''}`}>▼</div>
+                </button>
+
+                {isDropdownOpen && (
+                  <>
+                    <div className="dropdown-backdrop" onClick={() => setIsDropdownOpen(false)} />
+                    <div className="custom-dropdown-menu">
+                      {TIME_CONTROLS.map(tc => (
+                        <button
+                          key={tc.id}
+                          type="button"
+                          className={`dropdown-item ${selectedTimeControl === tc.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedTimeControl(tc.id);
+                            setIsDropdownOpen(false);
+                          }}
+                        >
+                          <span className="dropdown-item-icon">{tc.icon}</span>
+                          <div className="dropdown-item-text">
+                            <span className="dropdown-item-title">
+                              <strong>{tc.label}</strong> <span className="tc-time-muted">{tc.time}</span>
+                            </span>
+                            <span className="dropdown-item-desc">{tc.description}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

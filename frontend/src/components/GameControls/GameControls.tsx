@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaArrowsRotate, FaRotateLeft, FaPlus, FaExpand, FaCompress } from 'react-icons/fa6';
+import { FaArrowsRotate, FaRotateLeft, FaPlus, FaExpand, FaCompress, FaFlag } from 'react-icons/fa6';
 import './GameControls.css';
 
 interface GameControlsProps {
@@ -10,6 +10,7 @@ interface GameControlsProps {
   onNewGame?: () => void; // Optional for online games
   onToggleFullscreen: () => void;
   isFullscreen: boolean;
+  onResign?: () => void; // Optional for online games
 }
 
 const GameControls: React.FC<GameControlsProps> = ({
@@ -20,6 +21,7 @@ const GameControls: React.FC<GameControlsProps> = ({
   onNewGame,
   onToggleFullscreen,
   isFullscreen,
+  onResign,
 }) => {
   return (
     <div className="game-controls">
@@ -54,6 +56,17 @@ const GameControls: React.FC<GameControlsProps> = ({
           title="Nova partida"
         >
           <FaPlus />
+        </button>
+      )}
+      {/* Resign button - only show when provided (online games) */}
+      {onResign && (
+        <button 
+          className="control-button" 
+          onClick={onResign}
+          title="Desistir da partida"
+          style={{ color: '#ef4444' }}
+        >
+          <FaFlag />
         </button>
       )}
       

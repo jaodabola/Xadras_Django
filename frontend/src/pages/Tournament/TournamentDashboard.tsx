@@ -99,12 +99,14 @@ const TournamentDashboard: React.FC = () => {
           <p>Organize e participe em torneios de xadrez</p>
         </div>
         <div className="header-actions">
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate('/tournaments/create')}
-          >
-            + Criar Torneio
-          </button>
+          {!user?.isGuest && (
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/tournaments/create')}
+            >
+              + Criar Torneio
+            </button>
+          )}
         </div>
       </div>
 
@@ -213,8 +215,9 @@ const TournamentDashboard: React.FC = () => {
                     Ver Detalhes
                   </button>
 
-                  {tournament.status === 'PENDING' &&
-                   tournament.participant_count < tournament.max_participants && (
+                  {tournament.status === 'REGISTRATION' &&
+                   tournament.participant_count < tournament.max_participants && 
+                   !user?.isGuest && (
                     <button
                       className="btn btn-primary"
                       onClick={() => handleJoinTournament(tournament.id)}
@@ -239,7 +242,7 @@ const TournamentDashboard: React.FC = () => {
         </div>
         <div className="stat-card">
           <div className="stat-number">
-            {tournaments.filter(t => t.status === 'PENDING').length}
+            {tournaments.filter(t => t.status === 'REGISTRATION').length}
           </div>
           <div className="stat-label">Próximos</div>
         </div>
@@ -251,7 +254,7 @@ const TournamentDashboard: React.FC = () => {
         </div>
         <div className="stat-card">
           <div className="stat-number">
-            {tournaments.filter(t => t.status === 'COMPLETED').length}
+            {tournaments.filter(t => t.status === 'FINISHED').length}
           </div>
           <div className="stat-label">Terminados</div>
         </div>

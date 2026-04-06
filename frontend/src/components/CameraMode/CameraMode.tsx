@@ -198,11 +198,12 @@ const CameraMode: React.FC<CameraModeProps> = ({ onFenDetected, active }) => {
               fontFamily: 'monospace',
               letterSpacing: '0.3em',
               padding: '12px 24px',
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '8px',
+              background: 'var(--secondary)',
+              color: 'var(--fg)',
+              borderRadius: 'var(--radius-lg)',
               cursor: 'pointer',
               userSelect: 'all',
-              border: '2px dashed rgba(255,255,255,0.3)',
+              border: '2px dashed var(--border)',
               transition: 'all 0.2s ease',
             }}
           >

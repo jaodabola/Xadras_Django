@@ -61,6 +61,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             await self.handle_chat(data)
         elif data['type'] == 'board_update':
             await self.handle_board_update(data)
+        elif data['type'] == 'resign':
+            await self.handle_resign(data)
 
     async def handle_move(self, data):
         try:
@@ -192,4 +194,19 @@ class GameConsumer(AsyncWebsocketConsumer):
             'confidence': event['confidence'],
             'timestamp': event.get('timestamp'),
             'camera_id': event.get('camera_id')
+        }))
+
+    async def handle_resign(self, data):
+        await self.channel_layer.group_send(
+            self.game_group_name,
+            {
+                'type': 'game_resign',
+                'color': data.get('color')
+            }
+        )
+
+    async def game_resign(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'resign',
+            'color': event.get('color')
         }))

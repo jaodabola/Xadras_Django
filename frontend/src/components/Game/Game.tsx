@@ -8,12 +8,15 @@ import CameraMode from '../CameraMode/CameraMode';
 import type { MovePair } from '../../types';
 import './Game.css';
 
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useMatchmaking } from '../../contexts/MatchmakingContext';
 import api from '../../services/api';
 
 const Game: React.FC = () => {
   console.log('[Game] Rendered');
   const { gameId } = useParams<{ gameId: string }>();
+  const navigate = useNavigate();
+  const { leaveGame } = useMatchmaking();
   console.log('[Game] gameId:', gameId);
 
   // All state declarations at the top
@@ -31,6 +34,7 @@ const Game: React.FC = () => {
   const [cameraMode, setCameraMode] = useState(false); // Modo câmara para jogos locais
   const [gameData, setGameData] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [resignationWinner, setResignationWinner] = useState<'w' | 'b' | null>(null);
 
   // Refs after state
   const wsRef = useRef<WebSocket | null>(null);
@@ -183,6 +187,9 @@ const Game: React.FC = () => {
               [color]: [...prev[color], moveResult.captured as string],
             }));
           }
+        } else if (data.type === 'resign') {
+          const winner = data.color === 'w' ? 'b' : 'w';
+          setResignationWinner(winner);
         } else if (data.type === 'board_update') {
           // Vision AI board updates are handled in a dedicated interface.
           // For the classic digital-vs-digital game view we only log them.
@@ -271,7 +278,9 @@ const Game: React.FC = () => {
     // Local chess.js validation - only executed if turn validation passes
     let move;
     try {
-      move = gameRef.current.move({ from, to, promotion: promotion?.[1]?.toLowerCase() as 'q' | 'r' | 'b' | 'n' | undefined });
+      const moveObj: any = { from, to };
+      if (promotion) moveObj.promotion = promotion;
+      move = gameRef.current.move(moveObj);
     } catch (e) {
       setError('Jogada inválida');
       return false;
@@ -437,6 +446,8 @@ const Game: React.FC = () => {
   const canUserInteract = () => {
     // No modo câmara, desativar interação manual
     if (cameraMode) return false;
+    
+    if (resignationWinner) return false;
 
     // Para jogos locais, permitir sempre interação
     if (!gameId || !gameData || !currentUser) {
@@ -468,8 +479,105 @@ const Game: React.FC = () => {
     return true;
   };
 
+  const handleResign = () => {
+    if (!gameId || !gameData || !currentUser) return;
+    
+    const confirmed = window.confirm("Tem a certeza que quer desistir da partida?");
+    if (!confirmed) return;
+
+    const myColor = gameData.white_player?.id === currentUser.id ? 'w' : 
+                    (gameData.black_player?.id === currentUser.id ? 'b' : null);
+    
+    if (myColor) {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'resign',
+          color: myColor
+        }));
+      }
+      setResignationWinner(myColor === 'w' ? 'b' : 'w');
+    }
+  };
+
+  const getGameOverMessage = () => {
+    if (resignationWinner) {
+      if (gameId && gameData && currentUser) {
+        const isUserWhite = gameData.white_player?.id === currentUser.id;
+        const isUserBlack = gameData.black_player?.id === currentUser.id;
+        
+        if (resignationWinner === 'w' && isUserWhite) return 'Parabéns, ganhou por desistência do adversário!';
+        if (resignationWinner === 'b' && isUserBlack) return 'Parabéns, ganhou por desistência do adversário!';
+        if (resignationWinner === 'w' && isUserBlack) return 'Você desistiu da partida.';
+        if (resignationWinner === 'b' && isUserWhite) return 'Você desistiu da partida.';
+        
+        return resignationWinner === 'w' ? 'Vitória das Brancas por desistência' : 'Vitória das Pretas por desistência';
+      }
+      return resignationWinner === 'w' ? 'Vitória das Brancas por desistência' : 'Vitória das Pretas por desistência';
+    }
+
+    if (!gameRef.current.isGameOver()) return null;
+
+    if (gameRef.current.isCheckmate()) {
+      const loserColor = gameRef.current.turn(); // 'w' or 'b'
+      const winnerColor = loserColor === 'w' ? 'b' : 'w';
+      
+      if (gameId && gameData && currentUser) {
+        const isUserWhite = gameData.white_player?.id === currentUser.id;
+        const isUserBlack = gameData.black_player?.id === currentUser.id;
+        
+        if (winnerColor === 'w' && isUserWhite) return 'Parabéns, ganhou por xeque-mate!';
+        if (winnerColor === 'b' && isUserBlack) return 'Parabéns, ganhou por xeque-mate!';
+        if (loserColor === 'w' && isUserWhite) return 'Perdeu por xeque-mate.';
+        if (loserColor === 'b' && isUserBlack) return 'Perdeu por xeque-mate.';
+        
+        return winnerColor === 'w' ? 'As Brancas ganharam por xeque-mate' : 'As Pretas ganharam por xeque-mate';
+      }
+      return winnerColor === 'w' ? 'Vitória das Brancas' : 'Vitória das Pretas';
+    }
+
+    if (gameRef.current.isDraw()) {
+      if (gameRef.current.isStalemate()) return 'Empate por Rei afogado.';
+      if (gameRef.current.isThreefoldRepetition()) return 'Empate por tripla repetição.';
+      if (gameRef.current.isInsufficientMaterial()) return 'Empate por material insuficiente.';
+      return 'Empate.';
+    }
+
+    return 'Jogo terminado.';
+  };
+
+  const gameOverMessage = (gameId && (gameRef.current.isGameOver() || resignationWinner)) ? getGameOverMessage() : null;
+
   return (
     <div ref={containerRef} className={`game-container ${isFullscreen ? 'fullscreen' : ''}`}>
+      {/* Game Over Modal para jogos online */}
+      {gameOverMessage && (
+        <div className="game-over-modal-overlay">
+          <div className="game-over-modal">
+            <h2>{gameOverMessage}</h2>
+            <div className="game-over-actions">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  if (leaveGame) leaveGame();
+                  navigate('/play');
+                }}
+              >
+                Novo Jogo
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => {
+                  if (leaveGame) leaveGame();
+                  navigate('/');
+                }}
+              >
+                Página Inicial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Turn validation error overlay */}
       {turnError && (
         <div className="turn-error-overlay" style={{
@@ -497,6 +605,7 @@ const Game: React.FC = () => {
             onNewGame={gameId ? undefined : handleNewGame}
             onToggleFullscreen={toggleFullscreen}
             isFullscreen={isFullscreen}
+            onResign={gameId && !gameOverMessage ? handleResign : undefined}
           />
 
           {/* Botão do modo câmara — apenas para jogos locais */}

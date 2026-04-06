@@ -219,7 +219,7 @@ const TournamentDetail: React.FC = () => {
 
   const isOrganizer = user && selectedTournament && selectedTournament.created_by === user.id;
   const isParticipant = user && participants.some((p: any) => p.user === user.id);
-  const canJoin = user && selectedTournament && !isParticipant && selectedTournament.status === 'REGISTRATION' && selectedTournament.participant_count < selectedTournament.max_participants;
+  const canJoin = user && !user.isGuest && selectedTournament && !isParticipant && selectedTournament.status === 'REGISTRATION' && selectedTournament.participant_count < selectedTournament.max_participants;
 
   if (loading && !selectedTournament) {
     return (

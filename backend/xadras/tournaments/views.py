@@ -62,6 +62,12 @@ class TournamentViewSet(viewsets.ModelViewSet):
     @method_decorator(ratelimit(key='user', rate='5/m', method='POST', block=True))
     def create(self, request, *args, **kwargs):
         """Create a new tournament"""
+        if getattr(request.user, 'is_guest', False):
+            return Response(
+                {'error': 'Os convidados não podem criar torneios. Registe-se para criar um torneio.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -83,6 +89,12 @@ class TournamentViewSet(viewsets.ModelViewSet):
     @method_decorator(ratelimit(key='user', rate='5/m', method='POST', block=True))
     def join(self, request, pk=None):
         """Join tournament using join code or direct tournament ID"""
+        if getattr(request.user, 'is_guest', False):
+            return Response(
+                {'error': 'Os convidados não podem participar em torneios. Registe-se para jogar.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         tournament = self.get_object()
         
         # Check if tournament is joinable
@@ -407,6 +419,12 @@ class TournamentJoinByCodeView(viewsets.GenericViewSet):
     @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
     def create(self, request):
         """Join tournament using join code"""
+        if getattr(request.user, 'is_guest', False):
+            return Response(
+                {'error': 'Os convidados não podem participar em torneios. Registe-se para jogar.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         

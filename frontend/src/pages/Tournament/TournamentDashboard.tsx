@@ -29,9 +29,15 @@ const TournamentDashboard: React.FC = () => {
 
   // Filter tournaments based on status and search term
   const filteredTournaments = tournaments.filter(tournament => {
-    const matchesFilter = filter === 'all' || tournament.status.toLowerCase() === filter.replace('_', '_');
+    const statusMap: Record<string, string> = {
+      'all': '',
+      'pending': 'REGISTRATION',
+      'in_progress': 'IN_PROGRESS',
+      'completed': 'FINISHED',
+    };
+    const matchesFilter = filter === 'all' || tournament.status === statusMap[filter];
     const matchesSearch = tournament.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tournament.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (tournament.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -44,16 +50,18 @@ const TournamentDashboard: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusClasses = {
-      'PENDING': 'status-pending',
+    const statusClasses: Record<string, string> = {
+      'REGISTRATION': 'status-pending',
       'IN_PROGRESS': 'status-in-progress', 
-      'COMPLETED': 'status-completed'
+      'FINISHED': 'status-completed',
+      'CANCELLED': 'status-completed',
     };
     
-    const statusLabels = {
-      'PENDING': 'Próximo',
+    const statusLabels: Record<string, string> = {
+      'REGISTRATION': 'Inscrições Abertas',
       'IN_PROGRESS': 'A decorrer',
-      'COMPLETED': 'Terminado'
+      'FINISHED': 'Terminado',
+      'CANCELLED': 'Cancelado',
     };
 
     return (
@@ -99,7 +107,7 @@ const TournamentDashboard: React.FC = () => {
           <p>Organize e participe em torneios de xadrez</p>
         </div>
         <div className="header-actions">
-          {!user?.isGuest && (
+          {user && (
             <button
               className="btn btn-primary"
               onClick={() => navigate('/tournaments/create')}
@@ -214,19 +222,6 @@ const TournamentDashboard: React.FC = () => {
                   >
                     Ver Detalhes
                   </button>
-
-                  {tournament.status === 'REGISTRATION' &&
-                   tournament.participant_count < tournament.max_participants && 
-                   !user?.isGuest && (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleJoinTournament(tournament.id)}
-                      disabled={loading}
-                    >
-                      Participar
-                    </button>
-                  )}
-
                 </div>
               </div>
             ))}

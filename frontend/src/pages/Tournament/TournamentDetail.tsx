@@ -10,26 +10,6 @@ import TournamentStandingsTab from './components/TournamentStandingsTab';
 import TournamentDeleteModal from './components/TournamentDeleteModal';
 import './TournamentDetail.css';
 
-interface Pairing {
-  id: number;
-  round_number: number;
-  white_player: {
-    id: number;
-    username: string;
-  };
-  black_player: {
-    id: number;
-    username: string;
-  } | null;
-  bye_player: {
-    id: number;
-    username: string;
-  } | null;
-  result: string | null;
-  physical_board_id: string | null;
-  camera_id: number | null;
-}
-
 const TournamentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -47,17 +27,23 @@ const TournamentDetail: React.FC = () => {
     assignBoards,
     startRound,
     getStandings,
+    getAllPairings,
     loading,
     error,
     clearError
   } = useTournament();
 
-  const [pairings, setPairings] = useState<Pairing[]>([]);
+  const [pairings, setPairings] = useState<any[]>([]);
   const [standings, setStandings] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'pairings' | 'standings'>('info');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Modal de códigos de câmara por mesa
+  const [showBoardCodesModal, setShowBoardCodesModal] = useState(false);
+  const [boardCodes, setBoardCodes] = useState<{ boardNumber: number; sessionCode: string; white: string; black: string }[]>([]);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   // Edit Mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -103,19 +89,42 @@ const TournamentDetail: React.FC = () => {
     if (!id) return;
     try {
       const tournament = await getTournament(id);
-
       const participantsData = await getParticipants(id);
       setParticipants(participantsData);
 
       if (tournament.status !== 'REGISTRATION') {
-        if ((tournament as any).pairings) {
-          setPairings((tournament as any).pairings);
+        const allPairings = await getAllPairings(id);
+        setPairings(allPairings);
+
+        try {
+          const standingsData = await getStandings(id);
+          setStandings(standingsData);
+        } catch {
+          // Classificação pode não estar disponível ainda
         }
-        const standingsData = await getStandings(id);
-        setStandings(standingsData);
+      } else {
+        setPairings([]);
+        setStandings([]);
       }
     } catch (err) {
       console.error('Error loading tournament data:', err);
+    }
+  };
+
+  // Recarregar classificação ao mudar para esse tab
+  const handleTabChange = async (tab: 'info' | 'pairings' | 'standings') => {
+    setActiveTab(tab);
+    if (tab === 'standings' && id && selectedTournament?.status !== 'REGISTRATION') {
+      try {
+        const standingsData = await getStandings(id);
+        setStandings(standingsData);
+      } catch { /* ignorar */ }
+    }
+    if (tab === 'pairings' && id && selectedTournament?.status !== 'REGISTRATION') {
+      try {
+        const allPairings = await getAllPairings(id);
+        setPairings(allPairings);
+      } catch { /* ignorar */ }
     }
   };
 
@@ -140,17 +149,12 @@ const TournamentDetail: React.FC = () => {
     if (!id) return;
     try {
       setActionLoading('saving');
-
-      // Prepare data for update: convert empty strings to null for date fields
-      // This prevents 400 Bad Request errors from DRF DateTimeField
       const dataToUpdate = {
         ...editForm,
         registration_deadline: editForm.registration_deadline || null,
         start_date: editForm.start_date || null,
-        // Also handle time_control if empty
         time_control: editForm.time_control || null
       };
-
       await updateTournament(id, dataToUpdate);
       setIsEditing(false);
     } catch (err) {
@@ -160,28 +164,43 @@ const TournamentDetail: React.FC = () => {
     }
   };
 
-  const handleGeneratePairings = async () => {
+  // Iniciar torneio e gerar emparelhamentos da 1ª ronda
+  const handleStartTournament = async () => {
     if (!id) return;
     try {
-      setActionLoading('generate_pairings');
-      // Step 1: Start the tournament (REGISTRATION -> IN_PROGRESS, assigns seeds)
+      setActionLoading('start_tournament');
       await startTournament(id);
-      // Step 2: Generate pairings for the first round
       await generatePairings(id);
       await loadTournamentData();
       setActiveTab('pairings');
     } catch (err) {
-      console.error('Error generating pairings:', err);
+      console.error('Error starting tournament:', err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Gerar próxima ronda (torneio já em progresso)
+  const handleGenerateNextRound = async () => {
+    if (!id) return;
+    try {
+      setActionLoading('generate_pairings');
+      await generatePairings(id);
+      await loadTournamentData();
+      setActiveTab('pairings');
+    } catch (err) {
+      console.error('Error generating next round:', err);
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleStartRound = async () => {
-    if (!id) return;
+    if (!id || !selectedTournament) return;
+    const currentRound = (selectedTournament as any).current_round || 1;
     try {
       setActionLoading('start_round');
-      await startRound(id);
+      await startRound(id, currentRound);
       await loadTournamentData();
     } catch (err) {
       console.error('Error starting round:', err);
@@ -191,20 +210,69 @@ const TournamentDetail: React.FC = () => {
   };
 
   const handleAssignBoards = async () => {
-    if (!id || !pairings.length) return;
+    if (!id || !pairings.length || !selectedTournament) return;
     try {
       setActionLoading('assign_boards');
-      const assignments = pairings.map((pairing, index) => ({
-        pairing_id: pairing.id,
-        physical_board_id: `board_${String(index + 1).padStart(3, '0')}`,
-        camera_id: index + 1
-      }));
-      await assignBoards(id, { assignments });
+      const currentRound = (selectedTournament as any).current_round || 1;
+      // Só atribuir os pairings da ronda atual
+      const roundPairings = pairings.filter((p: any) => !p.is_bye && p.round_number === currentRound);
+
+      // Gerar um código de sessão único por mesa (mesmo formato do CameraMode)
+      const generateSessionCode = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+      };
+
+      const assignments: Record<string, any> = {};
+      const generatedCodes: { boardNumber: number; sessionCode: string; white: string; black: string }[] = [];
+
+      roundPairings.forEach((pairing: any, index: number) => {
+        const sessionCode = generateSessionCode();
+        const boardNumber = index + 1;
+        assignments[pairing.id] = {
+          physical_board_id: sessionCode,   // código de sessão como ID do tabuleiro
+          camera_id: boardNumber,
+          board_number: boardNumber,
+        };
+        generatedCodes.push({
+          boardNumber,
+          sessionCode,
+          white: pairing.white_player?.username || '?',
+          black: pairing.black_player?.username || '?',
+        });
+      });
+
+      await assignBoards(id, { round_number: currentRound, board_assignments: assignments });
       await loadTournamentData();
+
+      // Mostrar modal com os códigos
+      setBoardCodes(generatedCodes);
+      setShowBoardCodesModal(true);
     } catch (err) {
       console.error('Error assigning boards:', err);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const copyBoardCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = code;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
     }
   };
 
@@ -224,7 +292,17 @@ const TournamentDetail: React.FC = () => {
 
   const isOrganizer = user && selectedTournament && selectedTournament.created_by === user.id;
   const isParticipant = user && participants.some((p: any) => p.user === user.id);
-  const canJoin = user && !user.isGuest && selectedTournament && !isParticipant && selectedTournament.status === 'REGISTRATION' && selectedTournament.participant_count < selectedTournament.max_participants;
+  const canJoin = user && selectedTournament && !isParticipant && selectedTournament.status === 'REGISTRATION' && selectedTournament.participant_count < selectedTournament.max_participants;
+
+  // Verificar se a ronda atual tem todos os jogos terminados (para habilitar "próxima ronda")
+  const currentRound = (selectedTournament as any)?.current_round || 0;
+  const totalRounds = (selectedTournament as any)?.total_rounds || 0;
+  const currentRoundPairings = pairings.filter((p: any) => p.round_number === currentRound);
+  const allCurrentRoundFinished = currentRoundPairings.length > 0 &&
+    currentRoundPairings.every((p: any) => p.result !== null || p.is_bye);
+  const canGenerateNextRound = selectedTournament?.status === 'IN_PROGRESS' &&
+    allCurrentRoundFinished &&
+    (totalRounds === 0 || currentRound < totalRounds);
 
   if (loading && !selectedTournament) {
     return (
@@ -316,6 +394,11 @@ const TournamentDetail: React.FC = () => {
                 <div className="title-section">
                   <h1>{selectedTournament.name}</h1>
                   {getStatusBadge(selectedTournament.status)}
+                  {selectedTournament.status === 'IN_PROGRESS' && (
+                    <span className="round-info-badge">
+                      Ronda {currentRound}{totalRounds > 0 ? ` / ${totalRounds}` : ''}
+                    </span>
+                  )}
                 </div>
 
                 {/* Global Actions */}
@@ -392,17 +475,18 @@ const TournamentDetail: React.FC = () => {
               {isOrganizer && (
                 <div className="organizer-controls-inline">
                   <div className="controls-header">
-                    <h3>🛠️ Painel de Gestão Direta</h3>
+                    <h3>🛠️ Painel de Gestão</h3>
                   </div>
                   <div className="control-buttons">
+                    {/* Iniciar torneio (estado REGISTRATION) */}
                     {selectedTournament.status === 'REGISTRATION' && (
                       <div className="control-action-group">
                         <button
                           className="btn btn-primary glow-btn"
-                          onClick={handleGeneratePairings}
+                          onClick={handleStartTournament}
                           disabled={actionLoading !== null || selectedTournament.participant_count < 2}
                         >
-                          {actionLoading === 'generate_pairings' ? <LoadingSpinner size="small" /> : '▶ Iniciar Torneio e Gerar 1ª Ronda'}
+                          {actionLoading === 'start_tournament' ? <LoadingSpinner size="small" /> : '▶ Iniciar Torneio e Gerar 1ª Ronda'}
                         </button>
                         {selectedTournament.participant_count < 2 && (
                           <span className="help-text-inline">São necessários pelo menos 2 participantes para iniciar.</span>
@@ -410,22 +494,30 @@ const TournamentDetail: React.FC = () => {
                       </div>
                     )}
 
-                    {selectedTournament.status === 'IN_PROGRESS' && pairings.length > 0 && (
+                    {/* Controlos durante torneio */}
+                    {selectedTournament.status === 'IN_PROGRESS' && (
                       <div className="control-action-group">
-                        <button
-                          className="btn btn-secondary"
-                          onClick={handleAssignBoards}
-                          disabled={actionLoading !== null}
-                        >
-                          {actionLoading === 'assign_boards' ? <LoadingSpinner size="small" /> : '📹 Atribuir Tabuleiros Vision'}
-                        </button>
-                        <button
-                          className="btn btn-primary"
-                          onClick={handleStartRound}
-                          disabled={actionLoading !== null}
-                        >
-                          {actionLoading === 'start_round' ? <LoadingSpinner size="small" /> : '▶️ Iniciar Ronda'}
-                        </button>
+                        {/* Gerar próxima ronda — só quando a ronda atual está completa e há mais rondas */}
+                        {canGenerateNextRound && (
+                          <button
+                            className="btn btn-primary glow-btn"
+                            onClick={handleGenerateNextRound}
+                            disabled={actionLoading !== null}
+                          >
+                            {actionLoading === 'generate_pairings' ? <LoadingSpinner size="small" /> : `▶ Gerar Ronda ${currentRound + 1}`}
+                          </button>
+                        )}
+
+                        {/* Atribuir tabuleiros Vision */}
+                        {pairings.filter(p => p.round_number === currentRound).length > 0 && (
+                          <button
+                            className="btn btn-secondary"
+                            onClick={handleAssignBoards}
+                            disabled={actionLoading !== null}
+                          >
+                            {actionLoading === 'assign_boards' ? <LoadingSpinner size="small" /> : '📹 Atribuir Tabuleiros Vision'}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -440,19 +532,19 @@ const TournamentDetail: React.FC = () => {
           <div className="tabs-list">
             <button
               className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
-              onClick={() => setActiveTab('info')}
+              onClick={() => handleTabChange('info')}
             >
               ℹ️ Participantes
             </button>
             <button
               className={`tab-button ${activeTab === 'pairings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('pairings')}
+              onClick={() => handleTabChange('pairings')}
             >
               🎯 Emparelhamentos
             </button>
             <button
               className={`tab-button ${activeTab === 'standings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('standings')}
+              onClick={() => handleTabChange('standings')}
             >
               🏆 Classificação
             </button>
@@ -463,10 +555,13 @@ const TournamentDetail: React.FC = () => {
         <div className="tab-content animate-slide-up">
           {activeTab === 'info' && <TournamentInfoTab participants={participants} />}
           {activeTab === 'pairings' && (
-            <TournamentPairingsTab 
-              pairings={pairings} 
-              isOrganizer={!!isOrganizer} 
-              status={selectedTournament.status} 
+            <TournamentPairingsTab
+              pairings={pairings}
+              isOrganizer={!!isOrganizer}
+              status={selectedTournament.status}
+              currentUserId={user?.id}
+              organizerId={(selectedTournament as any).created_by}
+              tournamentId={id}
             />
           )}
           {activeTab === 'standings' && <TournamentStandingsTab standings={standings} />}
@@ -481,6 +576,51 @@ const TournamentDetail: React.FC = () => {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteTournament}
       />
+
+      {/* Modal de Códigos de Câmara por Mesa */}
+      {showBoardCodesModal && (
+        <div className="modal-overlay" onClick={() => setShowBoardCodesModal(false)}>
+          <div className="modal-box board-codes-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-icon">📷</div>
+            <h3>Códigos de Câmara — Ronda {(selectedTournament as any)?.current_round}</h3>
+            <p>Introduz cada código na app do tabuleiro físico correspondente.</p>
+
+            <div className="board-codes-list">
+              {boardCodes.map(board => (
+                <div key={board.boardNumber} className="board-code-row">
+                  <div className="board-code-info">
+                    <span className="board-code-number">Mesa {board.boardNumber}</span>
+                    <span className="board-code-players">
+                      <span className="bc-white">♙ {board.white}</span>
+                      <span className="bc-vs">vs</span>
+                      <span className="bc-black">♟ {board.black}</span>
+                    </span>
+                  </div>
+                  <div
+                    className="board-session-code"
+                    onClick={() => copyBoardCode(board.sessionCode)}
+                    title="Clique para copiar"
+                  >
+                    {board.sessionCode}
+                    <span className="copy-hint">
+                      {copiedCode === board.sessionCode ? '✅' : '📋'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions" style={{ justifyContent: 'center', marginTop: '1.5rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowBoardCodesModal(false)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

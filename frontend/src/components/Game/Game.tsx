@@ -9,7 +9,7 @@ import { ClockPanel, useGameClock } from '../GameClock/GameClock';
 import type { MovePair } from '../../types';
 import './Game.css';
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMatchmaking } from '../../contexts/MatchmakingContext';
 import api from '../../services/api';
 
@@ -17,8 +17,14 @@ const Game: React.FC = () => {
   console.log('[Game] Rendered');
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { leaveGame } = useMatchmaking();
   console.log('[Game] gameId:', gameId);
+
+  // Ler organizerId da query string (passado ao navegar de um torneio)
+  const queryParams = new URLSearchParams(location.search);
+  const tournamentOrganizerId = queryParams.get('organizerId');
+  const tournamentId = queryParams.get('tournamentId');
 
   // All state declarations at the top
   const [loading, setLoading] = useState(true);
@@ -520,8 +526,8 @@ const Game: React.FC = () => {
 
   // Determinar se o utilizador pode interagir com o tabuleiro
   const canUserInteract = () => {
-    // No modo câmara, desativar interação manual
-    if (cameraMode) return false;
+    // Câmara em jogo local: bloqueia interação manual
+    if (cameraMode && !gameId) return false;
     
     if (resignationWinner) return false;
 
@@ -540,6 +546,21 @@ const Game: React.FC = () => {
     }
 
     return false;
+  };
+
+  // Verificar se o utilizador pode ativar a câmara
+  const canUseCamera = () => {
+    // Jogo local: sempre pode
+    if (!gameId) return true;
+    // Online: só jogadores da partida ou organizador do torneio
+    if (!currentUser || !gameData) return false;
+    const isPlayer =
+      gameData.white_player?.id === currentUser.id ||
+      gameData.black_player?.id === currentUser.id;
+    const isOrganizer = tournamentOrganizerId
+      ? String(currentUser.id) === String(tournamentOrganizerId)
+      : false;
+    return isPlayer || isOrganizer;
   };
 
 
@@ -701,11 +722,12 @@ const Game: React.FC = () => {
             onNewGame={gameId ? undefined : handleNewGame}
             onToggleFullscreen={toggleFullscreen}
             isFullscreen={isFullscreen}
-            onResign={gameId && !gameOverMessage ? handleResign : undefined}
+            onResign={gameId && !gameOverMessage && !tournamentId ? handleResign : undefined}
+            onBackToTournament={tournamentId ? () => navigate(`/tournaments/${tournamentId}`) : undefined}
           />
 
-          {/* Botão do modo câmara — apenas para jogos locais */}
-          {!gameId && (
+          {/* Botão do modo câmara — jogadores e organizador do torneio */}
+          {canUseCamera() && (
             <button
               className={`camera-toggle-btn ${cameraMode ? 'camera-toggle-btn--active' : ''}`}
               onClick={toggleCameraMode}
@@ -770,8 +792,8 @@ const Game: React.FC = () => {
             calculateMaterial={calculateMaterial}
           />
 
-          {/* Painel da câmara — apenas para jogos locais */}
-          {!gameId && (
+          {/* Painel da câmara — disponível para jogadores e organizador */}
+          {canUseCamera() && (
             <CameraMode
               active={cameraMode}
               onFenDetected={handleFenUpdate}

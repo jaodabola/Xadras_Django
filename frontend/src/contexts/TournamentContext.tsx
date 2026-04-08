@@ -18,6 +18,9 @@ interface Tournament {
   created_at: string;
   start_date?: string;
   end_date?: string;
+  current_round?: number;
+  total_rounds?: number;
+  pairings?: any[];
 }
 
 interface TournamentContextType {
@@ -38,10 +41,12 @@ interface TournamentContextType {
   
   // Tournament operations
   startTournament: (tournamentId: string) => Promise<void>;
-  generatePairings: (tournamentId: string) => Promise<void>;
+  generatePairings: (tournamentId: string) => Promise<any>;
   assignBoards: (tournamentId: string, assignments: any) => Promise<void>;
-  startRound: (tournamentId: string) => Promise<void>;
+  startRound: (tournamentId: string, roundNumber: number) => Promise<void>;
   getStandings: (tournamentId: string) => Promise<any>;
+  getRounds: (tournamentId: string) => Promise<any[]>;
+  getAllPairings: (tournamentId: string) => Promise<any[]>;
   
   // State management
   setSelectedTournament: (tournament: Tournament | null) => void;
@@ -121,7 +126,7 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
       await fetchTournaments();
     } catch (err: any) {
       console.error('Error joining tournament:', err);
-      const errorMessage = err.response?.data?.detail || 'Failed to join tournament';
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to join tournament';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -136,7 +141,7 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
       await fetchTournaments();
     } catch (err: any) {
       console.error('Error leaving tournament:', err);
-      const errorMessage = err.response?.data?.detail || 'Failed to leave tournament';
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to leave tournament';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -206,16 +211,17 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  // Generate tournament pairings (Swiss algorithm)
-  const generatePairings = async (tournamentId: string) => {
+  // Generate tournament pairings (Swiss algorithm) — returns the pairings data
+  const generatePairings = async (tournamentId: string): Promise<any> => {
     try {
       setError(null);
-      await api.post(`/tournaments/${tournamentId}/generate_pairings/`);
-      // Refresh tournament data to show new pairings
+      const response = await api.post(`/tournaments/${tournamentId}/generate_pairings/`);
+      // Refresh tournament to get updated state
       await getTournament(tournamentId);
+      return response.data;
     } catch (err: any) {
       console.error('Error generating pairings:', err);
-      const errorMessage = err.response?.data?.detail || 'Failed to generate pairings';
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to generate pairings';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -226,7 +232,6 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       setError(null);
       await api.post(`/tournaments/${tournamentId}/assign_boards/`, assignments);
-      // Refresh tournament data to show board assignments
       await getTournament(tournamentId);
     } catch (err: any) {
       console.error('Error assigning boards:', err);
@@ -236,16 +241,15 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  // Start tournament round
-  const startRound = async (tournamentId: string) => {
+  // Start tournament round — requires round_number
+  const startRound = async (tournamentId: string, roundNumber: number) => {
     try {
       setError(null);
-      await api.post(`/tournaments/${tournamentId}/start_round/`);
-      // Refresh tournament data to show round start
+      await api.post(`/tournaments/${tournamentId}/start_round/`, { round_number: roundNumber });
       await getTournament(tournamentId);
     } catch (err: any) {
       console.error('Error starting round:', err);
-      const errorMessage = err.response?.data?.detail || 'Failed to start round';
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to start round';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
@@ -262,6 +266,34 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
       const errorMessage = err.response?.data?.detail || 'Failed to fetch standings';
       setError(errorMessage);
       throw new Error(errorMessage);
+    }
+  };
+
+  // Get all rounds for a tournament
+  const getRounds = async (tournamentId: string): Promise<any[]> => {
+    try {
+      const response = await api.get(`/tournaments/${tournamentId}/rounds/`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching rounds:', err);
+      return [];
+    }
+  };
+
+  // Get ALL pairings across all rounds for a tournament
+  const getAllPairings = async (tournamentId: string): Promise<any[]> => {
+    try {
+      const rounds = await getRounds(tournamentId);
+      const allPairings: any[] = [];
+      for (const round of rounds) {
+        const response = await api.get(`/tournaments/${tournamentId}/rounds/${round.round_number}/`);
+        const roundPairings = response.data?.pairings || [];
+        allPairings.push(...roundPairings);
+      }
+      return allPairings;
+    } catch (err) {
+      console.error('Error fetching all pairings:', err);
+      return [];
     }
   };
 
@@ -302,6 +334,8 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
         assignBoards,
         startRound,
         getStandings,
+        getRounds,
+        getAllPairings,
         setSelectedTournament,
         clearError,
       }}

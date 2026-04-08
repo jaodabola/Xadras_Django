@@ -1,16 +1,17 @@
 import React from 'react';
-import { FaArrowsRotate, FaRotateLeft, FaPlus, FaExpand, FaCompress, FaFlag } from 'react-icons/fa6';
+import { FaArrowsRotate, FaRotateLeft, FaPlus, FaExpand, FaCompress, FaFlag, FaArrowLeft } from 'react-icons/fa6';
 import './GameControls.css';
 
 interface GameControlsProps {
   autoFlipBoard: boolean;
   currentMoveIndex: number;
-  onToggleAutoFlip?: () => void; // Optional for online games
-  onUndo?: () => void; // Optional for online games
-  onNewGame?: () => void; // Optional for online games
+  onToggleAutoFlip?: () => void;
+  onUndo?: () => void;
+  onNewGame?: () => void;
   onToggleFullscreen: () => void;
   isFullscreen: boolean;
-  onResign?: () => void; // Optional for online games
+  onResign?: () => void;
+  onBackToTournament?: () => void;
 }
 
 const GameControls: React.FC<GameControlsProps> = ({
@@ -22,6 +23,7 @@ const GameControls: React.FC<GameControlsProps> = ({
   onToggleFullscreen,
   isFullscreen,
   onResign,
+  onBackToTournament,
 }) => {
   return (
     <div className="game-controls">
@@ -56,6 +58,16 @@ const GameControls: React.FC<GameControlsProps> = ({
           title="Nova partida"
         >
           <FaPlus />
+        </button>
+      )}
+      {/* Botão voltar ao torneio — mesmo sítio e estilo que o Desistir */}
+      {onBackToTournament && (
+        <button
+          className="control-button"
+          onClick={onBackToTournament}
+          title="Voltar ao Torneio"
+        >
+          <FaArrowLeft />
         </button>
       )}
       {/* Resign button - only show when provided (online games) */}

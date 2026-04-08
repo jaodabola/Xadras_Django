@@ -7,8 +7,20 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from .models import Game, Move
 from .serializers import GameSerializer, MoveSerializer
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
+
+
+def _try_process_tournament_result(game):
+    """Se o jogo pertence a um torneio, atualiza a classificação."""
+    try:
+        from tournaments.tournament_manager import process_tournament_game_result
+        process_tournament_game_result(game.id)
+    except Exception as e:
+        logger.warning(f"[Game] Não foi possível atualizar torneio para game {game.id}: {e}")
+
 
 class GameViewSet(viewsets.ModelViewSet):
     serializer_class = GameSerializer
@@ -16,6 +28,11 @@ class GameViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        # Para leitura (retrieve/list), qualquer utilizador autenticado pode ver jogos
+        # Espectadores de torneio precisam de aceder ao jogo sem serem jogadores
+        if self.action in ('retrieve', 'list'):
+            return Game.objects.all()
+        # Para ações de escrita (move, end, join), só os jogadores
         return Game.objects.filter(
             models.Q(white_player=user) | models.Q(black_player=user)
         )
@@ -55,9 +72,6 @@ class GameViewSet(viewsets.ModelViewSet):
         """Make a move in the game with improved validation and atomic operations"""
         from django.db import transaction
         import chess
-        import logging
-        
-        logger = logging.getLogger(__name__)
         
         game = self.get_object()
         
@@ -115,6 +129,7 @@ class GameViewSet(viewsets.ModelViewSet):
                 game_locked.save()
                 
                 # Check for game end conditions
+                game_finished = False
                 if chess_board.is_checkmate():
                     game_locked.status = 'FINISHED'
                     if chess_board.turn == chess.WHITE:  # Black won (white is in checkmate)
@@ -122,20 +137,28 @@ class GameViewSet(viewsets.ModelViewSet):
                     else:  # White won (black is in checkmate)
                         game_locked.result = 'WHITE_WIN'
                     game_locked.save()
+                    game_finished = True
                 elif chess_board.is_stalemate() or chess_board.is_insufficient_material():
                     game_locked.status = 'FINISHED'
                     game_locked.result = 'DRAW'
                     game_locked.save()
+                    game_finished = True
                 
                 serializer = MoveSerializer(move)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-                
+                response_data = serializer.data
+        
         except Exception as e:
             return Response({'error': f'Failed to save move: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # Atualizar torneio fora da transação para evitar deadlocks
+        if game_finished:
+            _try_process_tournament_result(game_locked)
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'])
     def end(self, request, pk=None):
-        """End the game with a result"""
+        """End the game with a result (resign / timeout)"""
         game = self.get_object()
         
         if game.status != 'IN_PROGRESS':
@@ -174,6 +197,10 @@ class GameViewSet(viewsets.ModelViewSet):
         # Save updated statistics
         game.white_player.save()
         game.black_player.save()
+
+        # Atualizar torneio se aplicável
+        _try_process_tournament_result(game)
         
         serializer = self.get_serializer(game)
         return Response(serializer.data)
+

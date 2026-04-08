@@ -85,16 +85,38 @@ class TournamentPairingSerializer(serializers.ModelSerializer):
     round_number = serializers.IntegerField(source='round.round_number', read_only=True)
     tournament_name = serializers.CharField(source='round.tournament.name', read_only=True)
     is_bye = serializers.ReadOnlyField()
+    game_id = serializers.SerializerMethodField()
+    white_player_info = serializers.SerializerMethodField()
+    black_player_info = serializers.SerializerMethodField()
+    bye_player_info = serializers.SerializerMethodField()
+    
+    def get_game_id(self, obj):
+        return str(obj.game.id) if obj.game else None
+
+    def get_white_player_info(self, obj):
+        if obj.white_player:
+            return {'id': obj.white_player.id, 'username': obj.white_player.username}
+        return None
+
+    def get_black_player_info(self, obj):
+        if obj.black_player:
+            return {'id': obj.black_player.id, 'username': obj.black_player.username}
+        return None
+
+    def get_bye_player_info(self, obj):
+        if obj.bye_player:
+            return {'id': obj.bye_player.id, 'username': obj.bye_player.username}
+        return None
     
     class Meta:
         model = TournamentPairing
         fields = [
             'id', 'round', 'round_number', 'tournament_name',
-            'white_player', 'white_player_username',
-            'black_player', 'black_player_username',
-            'bye_player', 'bye_player_username',
-            'game', 'result', 'board_number', 'is_bye',
-            'created_at', 'updated_at'
+            'white_player', 'white_player_username', 'white_player_info',
+            'black_player', 'black_player_username', 'black_player_info',
+            'bye_player', 'bye_player_username', 'bye_player_info',
+            'game', 'game_id', 'result', 'board_number',
+            'is_bye', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

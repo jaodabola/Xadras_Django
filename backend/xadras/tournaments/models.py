@@ -155,8 +155,7 @@ class Tournament(models.Model):
         """Check if tournament can start"""
         return (
             self.status == self.REGISTRATION and
-            self.participant_count >= 2 and
-            (self.registration_deadline is None or timezone.now() >= self.registration_deadline)
+            self.participant_count >= 2
         )
 
 

@@ -13,6 +13,7 @@ import Matchmaking from './pages/Matchmaking/Matchmaking';
 import TournamentDashboard from './pages/Tournament/TournamentDashboard';
 import TournamentCreator from './pages/Tournament/TournamentCreator';
 import TournamentDetail from './pages/Tournament/TournamentDetail';
+import Profile from './pages/Profile/Profile';
 import './App.css';
 
 const App: React.FC = () => {
@@ -37,19 +38,20 @@ const App: React.FC = () => {
                       <Register />
                     </ProtectedRoute>
                   } />
-                  
+
                   {/* Protected routes */}
                   <Route element={<ProtectedRoute requireAuth />}>
                     <Route path="/game" element={<Game />} />
                     <Route path="/game/:gameId" element={<Game />} />
                     <Route path="/play" element={<Matchmaking />} />
-                    
+                    <Route path="/profile" element={<Profile />} />
+
                     {/* Tournament routes */}
                     <Route path="/tournaments" element={<TournamentDashboard />} />
                     <Route path="/tournaments/create" element={<TournamentCreator />} />
                     <Route path="/tournaments/:id" element={<TournamentDetail />} />
                   </Route>
-                  
+
                   {/* 404 - Redirect to home */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

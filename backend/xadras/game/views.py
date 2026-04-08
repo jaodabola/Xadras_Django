@@ -10,6 +10,7 @@ from .serializers import GameSerializer, MoveSerializer
 
 User = get_user_model()
 
+
 class GameViewSet(viewsets.ModelViewSet):
     serializer_class = GameSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -25,13 +26,13 @@ class GameViewSet(viewsets.ModelViewSet):
         """Create a new game"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         # Create game with current user as white player
         game = Game.objects.create(
             white_player=request.user,
             status='PENDING'
         )
-        
+
         serializer = self.get_serializer(game)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -41,11 +42,11 @@ class GameViewSet(viewsets.ModelViewSet):
         game = self.get_object()
         if game.black_player or game.status != 'PENDING':
             return Response({'error': 'Game is not available'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         game.black_player = request.user
         game.status = 'IN_PROGRESS'
         game.save()
-        
+
         serializer = self.get_serializer(game)
         return Response(serializer.data)
 
@@ -56,22 +57,22 @@ class GameViewSet(viewsets.ModelViewSet):
         from django.db import transaction
         import chess
         import logging
-        
+
         logger = logging.getLogger(__name__)
-        
+
         game = self.get_object()
-        
+
         # Validate game status
         if game.status != 'IN_PROGRESS':
             return Response({'error': 'Game is not in progress'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Validate required move data
         move_san = request.data.get('move_san')
         fen_after = request.data.get('fen_after')
-        
+
         if not move_san or not fen_after:
             return Response({'error': 'Missing move data (move_san and fen_after required)'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Use atomic transaction to prevent race conditions
         try:
             with transaction.atomic():
@@ -87,20 +88,21 @@ class GameViewSet(viewsets.ModelViewSet):
                 is_white_turn = board_before.turn == chess.WHITE
 
                 # Current move count is still used only for numbering
-                current_move_count = Move.objects.filter(game=game_locked).count()
-                
+                current_move_count = Move.objects.filter(
+                    game=game_locked).count()
+
                 # Validate turn ownership
                 if is_white_turn and game_locked.white_player != request.user:
                     return Response({'error': 'Not your turn - it is white\'s turn'}, status=status.HTTP_400_BAD_REQUEST)
                 elif not is_white_turn and game_locked.black_player != request.user:
                     return Response({'error': 'Not your turn - it is black\'s turn'}, status=status.HTTP_400_BAD_REQUEST)
-                
+
                 # Validate FEN string format
                 try:
                     chess_board = chess.Board(fen_after)
                 except ValueError:
                     return Response({'error': 'Invalid FEN string format'}, status=status.HTTP_400_BAD_REQUEST)
-                
+
                 # Create move with reliable move numbering
                 move_number = current_move_count + 1
                 move = Move.objects.create(
@@ -109,15 +111,16 @@ class GameViewSet(viewsets.ModelViewSet):
                     move_san=move_san,
                     fen_after=fen_after
                 )
-                
+
                 # Update game FEN to match the latest move
                 game_locked.fen_string = fen_after
                 game_locked.save()
-                
+
                 # Check for game end conditions
                 if chess_board.is_checkmate():
                     game_locked.status = 'FINISHED'
-                    if chess_board.turn == chess.WHITE:  # Black won (white is in checkmate)
+                    # Black won (white is in checkmate)
+                    if chess_board.turn == chess.WHITE:
                         game_locked.result = 'BLACK_WIN'
                     else:  # White won (black is in checkmate)
                         game_locked.result = 'WHITE_WIN'
@@ -126,10 +129,10 @@ class GameViewSet(viewsets.ModelViewSet):
                     game_locked.status = 'FINISHED'
                     game_locked.result = 'DRAW'
                     game_locked.save()
-                
+
                 serializer = MoveSerializer(move)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-                
+
         except Exception as e:
             return Response({'error': f'Failed to save move: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -137,19 +140,19 @@ class GameViewSet(viewsets.ModelViewSet):
     def end(self, request, pk=None):
         """End the game with a result"""
         game = self.get_object()
-        
+
         if game.status != 'IN_PROGRESS':
             return Response({'error': 'Game is not in progress'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         result = request.data.get('result')
         if result not in ['WHITE_WIN', 'BLACK_WIN', 'DRAW']:
             return Response({'error': 'Invalid result'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Update game result and status
         game.result = result
         game.status = 'FINISHED'
         game.save()
-        
+
         # Update player statistics
         if result == 'WHITE_WIN':
             game.white_player.update_statistics('win')
@@ -160,14 +163,22 @@ class GameViewSet(viewsets.ModelViewSet):
         else:  # DRAW
             game.white_player.update_statistics('draw')
             game.black_player.update_statistics('draw')
-        
+
         # Calculate new ELO ratings
-        game.white_player.calculate_elo(game.black_player.elo_rating, result)
-        game.black_player.calculate_elo(game.white_player.elo_rating, 'BLACK_WIN' if result == 'WHITE_WIN' else 'WHITE_WIN' if result == 'BLACK_WIN' else 'DRAW')
-        
+        white_win_status = 'win' if result == 'WHITE_WIN' else 'loss' if result == 'BLACK_WIN' else 'draw'
+        black_win_status = 'win' if result == 'BLACK_WIN' else 'loss' if result == 'WHITE_WIN' else 'draw'
+
+        new_white_elo = game.white_player.calculate_elo(
+            game.black_player.elo_rating, white_win_status)
+        new_black_elo = game.black_player.calculate_elo(
+            game.white_player.elo_rating, black_win_status)
+
+        game.white_player.elo_rating = new_white_elo
+        game.black_player.elo_rating = new_black_elo
+
         # Save updated statistics
         game.white_player.save()
         game.black_player.save()
-        
+
         serializer = self.get_serializer(game)
         return Response(serializer.data)

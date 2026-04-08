@@ -22,13 +22,13 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   onMove,
   lastMove,
   interactive = true,
-  width = 500,
 }) => {
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
   const [highlightedSquares, setHighlightedSquares] = useState<string[]>([]);
   const [kingInCheck, setKingInCheck] = useState<string | null>(null);
+  const [promotionMove, setPromotionMove] = useState<{ from: string, to: string } | null>(null);
 
   // Update game state when position prop changes
   useEffect(() => {
@@ -68,6 +68,42 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [lastMove]);
 
+  const confirmMove = (from: string, to: string, promotion?: string) => {
+    try {
+      const moveObj = game.move({
+        from: from as Square,
+        to: to as Square,
+        promotion: promotion || 'q',
+      });
+
+      if (moveObj) {
+        onMove({
+          from: moveObj.from,
+          to: moveObj.to,
+          promotion: moveObj.promotion
+        });
+      }
+    } catch (e) {
+      console.log('Invalid move');
+    }
+    setPromotionMove(null);
+    setSelectedSquare(null);
+    setValidMoves([]);
+  };
+
+  const attemptMove = (from: string, to: string) => {
+    const piece = game.get(from as Square);
+    if (piece && piece.type === 'p' && (to[1] === '8' || to[1] === '1')) {
+      const moves = game.moves({ square: from as Square, verbose: true }) as Move[];
+      const isValidPromotion = moves.some(m => m.to === to && m.promotion);
+      if (isValidPromotion) {
+        setPromotionMove({ from, to });
+        return;
+      }
+    }
+    confirmMove(from, to);
+  };
+
   const handleSquareClick = (square: string) => {
     if (!interactive) return;
 
@@ -91,32 +127,68 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       return;
     }
 
-    try {
-      const move = {
-        from: selectedSquare,
-        to: square,
-        promotion: 'q',
-      };
-
-      const moveObj = game.move({
-        from: move.from as Square,
-        to: move.to as Square,
-        promotion: 'q',
-      });
-
-      if (moveObj) {
-        onMove({
-          from: moveObj.from,
-          to: moveObj.to,
-          promotion: moveObj.promotion
-        });
+    if (validMoves.includes(square)) {
+      attemptMove(selectedSquare, square);
+    } else {
+      const piece = game.get(square as Square);
+      if (piece && piece.color === game.turn()) {
+        setSelectedSquare(square);
+        const moves = game.moves({
+          square: square as Square,
+          verbose: true
+        }) as Move[];
+        setValidMoves(moves.map(move => move.to));
+      } else {
+        setSelectedSquare(null);
+        setValidMoves([]);
       }
-    } catch (e) {
-      console.log('Invalid move');
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, squareId: string) => {
+    if (!interactive) {
+      e.preventDefault();
+      return;
+    }
+    const piece = game.get(squareId as Square);
+    if (!piece || piece.color !== game.turn()) {
+      e.preventDefault();
+      return;
     }
 
-    setSelectedSquare(null);
-    setValidMoves([]);
+    e.dataTransfer.setData('text/plain', squareId);
+    e.dataTransfer.effectAllowed = 'move';
+
+    const target = e.currentTarget;
+    const img = target.querySelector('img');
+    if (img) {
+      e.dataTransfer.setDragImage(img, img.clientWidth / 2, img.clientHeight / 2);
+    }
+
+    // Apenas calculamos os movimentos válidos para mostrar os indicadores (bolinhas)
+    // Sem selecionar a casa (evita o fundo amarelo)
+    const moves = game.moves({
+      square: squareId as Square,
+      verbose: true
+    }) as Move[];
+    setValidMoves(moves.map(move => move.to));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetSquare: string) => {
+    e.preventDefault();
+    if (!interactive) return;
+
+    const sourceSquare = e.dataTransfer.getData('text/plain');
+    if (!sourceSquare || sourceSquare === targetSquare) {
+      return;
+    }
+
+    attemptMove(sourceSquare, targetSquare);
   };
 
   // Retorna o caminho para o SVG da peça
@@ -135,14 +207,23 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     return displayRanks.flatMap((rank) =>
       displayFiles.map((file) => {
         const squareId = `${file}${rank}` as Square;
-        const square = game.get(squareId);
+        let square: Piece | undefined | null = game.get(squareId);
+
+        if (promotionMove) {
+          if (squareId === promotionMove.from) {
+            square = undefined;
+          } else if (squareId === promotionMove.to) {
+            square = game.get(promotionMove.from as Square);
+          }
+        }
+
         const fileIndex = files.indexOf(file as typeof files[0]);
         const isWhite = (fileIndex + rank) % 2 === 0;
         const isSelected = selectedSquare === squareId;
         const isValidMove = validMoves.includes(squareId);
         const isHighlighted = highlightedSquares.includes(squareId);
         const isKingInCheck = kingInCheck === squareId;
-        const hasPiece = square !== null;
+        const hasPiece = !!square;
 
         const squareClass = [
           'square',
@@ -165,8 +246,13 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             id={squareId}
             className={squareClass}
             onClick={() => handleSquareClick(squareId)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, squareId)}
+            draggable={interactive && hasPiece}
+            onDragStart={(e) => handleDragStart(e, squareId)}
             style={{
-              cursor: interactive ? 'pointer' : 'default'
+              cursor: interactive ? 'pointer' : 'default',
+              position: 'relative'
             }}
           >
             {square && (
@@ -183,6 +269,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 />
               </div>
             )}
+
             {isValidMove && !hasPiece && <div className="move-indicator" />}
             {isValidMove && hasPiece && <div className="capture-indicator" />}
           </div>
@@ -192,8 +279,27 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   }, [game, orientation, selectedSquare, validMoves, highlightedSquares, kingInCheck, interactive]);
 
   return (
-    <div className="chess-board">
+    <div className="chess-board" style={{ position: 'relative' }}>
       {renderBoard()}
+
+      {promotionMove && (
+        <div className="promotion-modal-overlay">
+          <div className="promotion-modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 1.5rem', textAlign: 'center', color: 'var(--fg)', fontSize: '1.25rem' }}>Promover Peão</h3>
+            <div className="promotion-options">
+              {['q', 'r', 'b', 'n'].map((p) => (
+                <div
+                  key={p}
+                  className="promotion-option"
+                  onClick={() => confirmMove(promotionMove.from, promotionMove.to, p)}
+                >
+                  <img src={`/pieces/${game.turn()}${p.toUpperCase()}.svg`} alt={p} draggable={false} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

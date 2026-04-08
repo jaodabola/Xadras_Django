@@ -3,17 +3,18 @@ import api from '../services/api';
 import { useAuth } from './AuthContext';
 
 interface Tournament {
-  id: number;
+  id: string;
   name: string;
   description: string;
   max_participants: number;
-  current_participants: number;
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
-  created_by: {
-    id: number;
-    username: string;
-  };
+  participant_count: number;
+  status: 'REGISTRATION' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+  created_by: number;
+  created_by_username: string;
   participants: any[];
+  tournament_type?: string;
+  time_control?: string;
+  increment?: number;
   created_at: string;
   start_date?: string;
   end_date?: string;
@@ -24,20 +25,24 @@ interface TournamentContextType {
   loading: boolean;
   error: string | null;
   selectedTournament: Tournament | null;
-  
+
   // Tournament management
   fetchTournaments: () => Promise<void>;
   createTournament: (tournamentData: any) => Promise<Tournament>;
-  joinTournament: (tournamentId: number) => Promise<void>;
-  leaveTournament: (tournamentId: number) => Promise<void>;
-  getTournament: (tournamentId: number) => Promise<Tournament>;
-  
+  updateTournament: (tournamentId: string, data: any) => Promise<Tournament>;
+  getParticipants: (tournamentId: string) => Promise<any[]>;
+  joinTournament: (tournamentId: string) => Promise<void>;
+  leaveTournament: (tournamentId: string) => Promise<void>;
+  deleteTournament: (tournamentId: string) => Promise<void>;
+  getTournament: (tournamentId: string) => Promise<Tournament>;
+
   // Tournament operations
-  generatePairings: (tournamentId: number) => Promise<void>;
-  assignBoards: (tournamentId: number, assignments: any) => Promise<void>;
-  startRound: (tournamentId: number) => Promise<void>;
-  getStandings: (tournamentId: number) => Promise<any>;
-  
+  startTournament: (tournamentId: string) => Promise<void>;
+  generatePairings: (tournamentId: string) => Promise<void>;
+  assignBoards: (tournamentId: string, assignments: any) => Promise<void>;
+  startRound: (tournamentId: string) => Promise<void>;
+  getStandings: (tournamentId: string) => Promise<any>;
+
   // State management
   setSelectedTournament: (tournament: Tournament | null) => void;
   clearError: () => void;
@@ -83,8 +88,32 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Update tournament
+  const updateTournament = async (tournamentId: string, data: any): Promise<Tournament> => {
+    try {
+      setError(null);
+      const response = await api.patch(`/tournaments/${tournamentId}/`, data);
+      const updatedTournament = response.data;
+
+      setTournaments(prev =>
+        prev.map(t => t.id === tournamentId ? updatedTournament : t)
+      );
+
+      if (selectedTournament?.id === tournamentId) {
+        setSelectedTournament(updatedTournament);
+      }
+
+      return updatedTournament;
+    } catch (err: any) {
+      console.error('Error updating tournament:', err);
+      const errorMessage = err.response?.data?.detail || 'Failed to update tournament';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
   // Join tournament
-  const joinTournament = async (tournamentId: number) => {
+  const joinTournament = async (tournamentId: string) => {
     try {
       setError(null);
       await api.post(`/tournaments/${tournamentId}/join/`);
@@ -99,7 +128,7 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   // Leave tournament
-  const leaveTournament = async (tournamentId: number) => {
+  const leaveTournament = async (tournamentId: string) => {
     try {
       setError(null);
       await api.post(`/tournaments/${tournamentId}/leave/`);
@@ -113,8 +142,19 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Get participants
+  const getParticipants = async (tournamentId: string): Promise<any[]> => {
+    try {
+      const response = await api.get(`/tournaments/${tournamentId}/participants/`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching participants:', err);
+      return [];
+    }
+  };
+
   // Get specific tournament details
-  const getTournament = async (tournamentId: number): Promise<Tournament> => {
+  const getTournament = async (tournamentId: string): Promise<Tournament> => {
     try {
       setError(null);
       const response = await api.get(`/tournaments/${tournamentId}/`);
@@ -129,8 +169,45 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Delete tournament
+  const deleteTournament = async (tournamentId: string) => {
+    try {
+      setError(null);
+      await api.delete(`/tournaments/${tournamentId}/`);
+      setTournaments(prev => prev.filter(t => t.id !== tournamentId));
+      if (selectedTournament?.id === tournamentId) {
+        setSelectedTournament(null);
+      }
+    } catch (err: any) {
+      console.error('Error deleting tournament:', err);
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Falha ao apagar o torneio';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Start tournament (REGISTRATION -> IN_PROGRESS, assigns seeds)
+  const startTournament = async (tournamentId: string) => {
+    try {
+      setError(null);
+      const response = await api.post(`/tournaments/${tournamentId}/start/`);
+      const updatedTournament = response.data;
+      setTournaments(prev =>
+        prev.map(t => t.id === tournamentId ? updatedTournament : t)
+      );
+      if (selectedTournament?.id === tournamentId) {
+        setSelectedTournament(updatedTournament);
+      }
+    } catch (err: any) {
+      console.error('Error starting tournament:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.detail || 'Failed to start tournament';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
   // Generate tournament pairings (Swiss algorithm)
-  const generatePairings = async (tournamentId: number) => {
+  const generatePairings = async (tournamentId: string) => {
     try {
       setError(null);
       await api.post(`/tournaments/${tournamentId}/generate_pairings/`);
@@ -145,7 +222,7 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   // Assign boards for Vision AI integration
-  const assignBoards = async (tournamentId: number, assignments: any) => {
+  const assignBoards = async (tournamentId: string, assignments: any) => {
     try {
       setError(null);
       await api.post(`/tournaments/${tournamentId}/assign_boards/`, assignments);
@@ -160,7 +237,7 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   // Start tournament round
-  const startRound = async (tournamentId: number) => {
+  const startRound = async (tournamentId: string) => {
     try {
       setError(null);
       await api.post(`/tournaments/${tournamentId}/start_round/`);
@@ -175,7 +252,7 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   // Get tournament standings
-  const getStandings = async (tournamentId: number) => {
+  const getStandings = async (tournamentId: string) => {
     try {
       setError(null);
       const response = await api.get(`/tournaments/${tournamentId}/standings/`);
@@ -214,9 +291,13 @@ export const TournamentProvider: React.FC<{ children: ReactNode }> = ({ children
         selectedTournament,
         fetchTournaments,
         createTournament,
+        updateTournament,
+        getParticipants,
         joinTournament,
         leaveTournament,
+        deleteTournament,
         getTournament,
+        startTournament,
         generatePairings,
         assignBoards,
         startRound,

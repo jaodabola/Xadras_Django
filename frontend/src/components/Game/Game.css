@@ -55,8 +55,15 @@
 }
 
 @keyframes slideDown {
-  from { transform: translateX(-50%) translateY(-10px); opacity: 0; }
-  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+  from {
+    transform: translateX(-50%) translateY(-10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Main layout */
@@ -78,8 +85,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0;
 }
+
+/* Espaçamento entre os controlos e o relógio/tabuleiro */
+.board-container>.game-controls {
+  margin-bottom: 1rem;
+}
+
+.board-container>.camera-toggle-btn {
+  margin-bottom: 1rem;
+}
+
+/* Os clock-panels ficam colados ao tabuleiro (gap: 0) */
 
 /* Side panel */
 .game-info {
@@ -117,8 +135,14 @@
     gap: 1.25rem;
     align-items: start;
   }
-  .board-container { grid-column: 1; }
-  .game-info       { grid-column: 2; }
+
+  .board-container {
+    grid-column: 1;
+  }
+
+  .game-info {
+    grid-column: 2;
+  }
 }
 
 /* Fullscreen */
@@ -128,18 +152,44 @@
   height: 100%;
   gap: 0.75rem;
 }
-.game-container.fullscreen .board-container { height: 100%; padding: 1rem; justify-content: center; }
-.game-container.fullscreen .game-info { height: 100%; overflow-y: auto; }
+
+.game-container.fullscreen .board-container {
+  height: 100%;
+  padding: 1rem;
+  justify-content: center;
+}
+
+.game-container.fullscreen .game-info {
+  height: 100%;
+  overflow-y: auto;
+}
 
 @media (max-width: 768px) {
-  .game-container { padding: 1rem 0.5rem; }
-  .board-container { padding: 1rem 0.5rem; }
+  .game-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .board-container {
+    padding: 1rem 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
-  .game-container { padding: 0.5rem 0.25rem; }
-  .board-container { padding: 0.5rem; border-radius: var(--radius-lg); }
-  .turn-error-overlay { font-size: 0.875rem; max-width: calc(100% - 2rem); white-space: normal; text-align: center; }
+  .game-container {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .board-container {
+    padding: 0.5rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .turn-error-overlay {
+    font-size: 0.875rem;
+    max-width: calc(100% - 2rem);
+    white-space: normal;
+    text-align: center;
+  }
 }
 
 /* -- Botão do modo câmara -- */
@@ -170,4 +220,72 @@
   border-color: #10b981;
   color: #10b981;
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+/* -- Game Over Modal -- */
+.game-over-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.game-over-modal {
+  background: var(--card);
+  padding: 2.5rem;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  border: 1.5px solid var(--border);
+  animation: scaleIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.game-over-modal h2 {
+  font-size: 1.5rem;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
+  font-family: var(--font-serif);
+}
+
+.game-over-actions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.game-over-actions button {
+  flex: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

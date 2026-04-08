@@ -82,7 +82,25 @@ const Navbar: React.FC = () => {
           <div className="user-section">
             {user ? (
               <div className="user-menu">
-                <span className="username">{user.username}</span>
+                {user.isGuest ? (
+                  <div className="username-link" style={{ cursor: 'default' }}>
+                    <div className="nav-avatar">
+                      <span>{user.username.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span className="username-text">{user.username}</span>
+                  </div>
+                ) : (
+                  <Link to="/profile" className="username-link" title="Ver Perfil" onClick={closeMobile}>
+                    <div className="nav-avatar">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt="Avatar" />
+                      ) : (
+                        <span>{user.username.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <span className="username-text">{user.username}</span>
+                  </Link>
+                )}
                 <button onClick={handleLogout} className="logout-button">
                   Sair
                 </button>

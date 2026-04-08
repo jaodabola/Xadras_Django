@@ -58,10 +58,17 @@ class MatchmakingView(APIView):
 
         user = request.user
         preferred_color = request.data.get("preferred_color", "ANY").upper()
+        time_control = request.data.get("time_control", "rapid").lower()
 
         if preferred_color not in ["WHITE", "BLACK", "ANY"]:
             return Response(
                 {"error": "Preferência de cor inválida"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if time_control not in ["bullet", "blitz", "rapid", "classical", "unlimited"]:
+            return Response(
+                {"error": "Ritmo de jogo inválido"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -74,6 +81,7 @@ class MatchmakingView(APIView):
             user=user,
             rating=rating,
             preferred_color=preferred_color,
+            time_control=time_control,
             joined_at=timezone.now(),
         )
 
@@ -114,7 +122,9 @@ class MatchmakingView(APIView):
 
     def find_opponent(self, entry):
 
-        others = MatchmakingQueue.objects.exclude(user=entry.user)
+        others = MatchmakingQueue.objects.filter(
+            time_control=entry.time_control
+        ).exclude(user=entry.user)
 
         for opponent in others:
 
@@ -145,6 +155,7 @@ class MatchmakingView(APIView):
             white_player=white,
             black_player=black,
             status="IN_PROGRESS",
+            time_control=player1.time_control,
         )
 
         MatchmakingQueue.objects.filter(

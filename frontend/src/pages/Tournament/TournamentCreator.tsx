@@ -130,7 +130,6 @@ const TournamentCreator: React.FC = () => {
           type="text"
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
-          placeholder="Nome do torneio"
           className={validationErrors.name ? 'error' : ''}
         />
         {validationErrors.name && <span className="error-text">{validationErrors.name}</span>}
@@ -142,7 +141,6 @@ const TournamentCreator: React.FC = () => {
           id="description"
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
-          placeholder="Descreva o torneio…"
           rows={4}
           className={validationErrors.description ? 'error' : ''}
         />
@@ -178,7 +176,7 @@ const TournamentCreator: React.FC = () => {
           onChange={(e) => handleInputChange('tournament_type', e.target.value)}
         >
           <option value="SWISS">Sistema Suíço</option>
-          <option value="ROUND_ROBIN">Round Robin</option>
+          <option value="ROUND_ROBIN">Todos Contra Todos</option>
           <option value="ELIMINATION">Eliminação Simples</option>
         </select>
         <small className="help-text">
@@ -264,17 +262,17 @@ const TournamentCreator: React.FC = () => {
               handleInputChange('start_date', '');
               return;
             }
-            
+
             // Check if user typed a date in the past
             const selectedDate = new Date(val);
             const now = new Date();
             // Allow 60 seconds of grace period for slow typers/current time bounds
             if (selectedDate.getTime() < now.getTime() - 60000) {
-               // Revert/Force to current local time min string
-               const currentMin = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-               handleInputChange('start_date', currentMin);
+              // Revert/Force to current local time min string
+              const currentMin = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+              handleInputChange('start_date', currentMin);
             } else {
-               handleInputChange('start_date', val);
+              handleInputChange('start_date', val);
             }
           }}
         />

@@ -21,6 +21,9 @@ class User(AbstractUser):
     # Indica se o utilizador é um convidado temporário
     is_guest = models.BooleanField(default=False)
 
+    # Imagem de perfil do utilizador (Avatar)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+
     # Constante utilizada no cálculo do ELO
     ELO_K_FACTOR = 32
 

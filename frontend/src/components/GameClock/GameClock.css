@@ -1,0 +1,168 @@
+/* ── Clock Panel — barra compacta colada ao tabuleiro ── */
+
+.clock-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    box-sizing: border-box;
+    transition: background 0.2s, border-color 0.2s;
+    min-height: 2rem;
+    margin: 0;
+
+    /* Mesma largura do tabuleiro */
+    width: min(100%, 72vh);
+    max-width: 540px;
+    align-self: center;
+
+    /* Sem cantos arredondados para colar ao tabuleiro */
+    border-radius: 0;
+}
+
+/* Painel de cima: cantos arredondados em cima, sem borda em baixo */
+.board-container .clock-panel:nth-of-type(1) {
+    border-radius: 6px 6px 0 0;
+    border-bottom: none;
+}
+
+/* Painel de baixo: cantos arredondados em baixo, sem borda em cima */
+.board-container .chess-board~.clock-panel {
+    border-radius: 0 0 6px 6px;
+    border-top: none;
+}
+
+/* Painel do jogador ativo */
+.clock-panel--active {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--primary);
+}
+
+/* Tempo baixo */
+.clock-panel--low {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: #ef4444 !important;
+    animation: clockLowPulse 1s ease-in-out infinite;
+}
+
+@keyframes clockLowPulse {
+
+    0%,
+    100% {
+        background: rgba(239, 68, 68, 0.07);
+    }
+
+    50% {
+        background: rgba(239, 68, 68, 0.18);
+    }
+}
+
+/* Nome do jogador */
+.clock-panel__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted-fg);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.clock-panel--active .clock-panel__label {
+    color: var(--primary);
+}
+
+.clock-panel--low .clock-panel__label {
+    color: #ef4444;
+}
+
+/* Tempo */
+.clock-panel__time {
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    font-family: 'Courier New', 'Roboto Mono', monospace;
+    min-width: 3.25rem;
+    text-align: right;
+}
+
+.clock-panel--low .clock-panel__time {
+    color: #ef4444;
+    animation: timeFlash 0.5s ease-in-out infinite;
+}
+
+.clock-panel__unlimited {
+    color: var(--muted-fg);
+    font-size: 1rem;
+}
+
+@keyframes timeFlash {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Ponto pulsante */
+.clock-panel__pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    flex-shrink: 0;
+    animation: pulseDot 1.2s ease-in-out infinite;
+}
+
+.clock-panel--low .clock-panel__pulse {
+    background: #ef4444;
+}
+
+@keyframes pulseDot {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.35;
+        transform: scale(0.55);
+    }
+}
+
+/* Badge com ritmo */
+.clock-panel__badge {
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 999px;
+    padding: 0.05rem 0.4rem;
+    flex-shrink: 0;
+}
+
+.clock-panel--low .clock-panel__badge {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Responsive — mobile */
+@media (max-width: 768px) {
+    .clock-panel {
+        width: 100%;
+        max-width: 100%;
+    }
+}

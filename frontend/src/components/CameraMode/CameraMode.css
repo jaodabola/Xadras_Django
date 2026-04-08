@@ -160,8 +160,17 @@
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }
 
 .camera-status-stats {
@@ -176,20 +185,22 @@
   align-items: center;
   gap: 8px;
   padding: 24px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border);
+  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 
 .camera-idle-icon {
   font-size: 2rem;
-  opacity: 0.5;
+  opacity: 0.8;
+  color: var(--fg);
 }
 
 .camera-idle-text {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9rem;
+  color: var(--muted-fg);
   line-height: 1.4;
 }
 

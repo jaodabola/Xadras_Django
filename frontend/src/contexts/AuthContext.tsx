@@ -11,6 +11,7 @@ interface User {
   games_won?: number;
   games_lost?: number;
   games_drawn?: number;
+  avatar?: string;
 }
 
 interface AuthContextType {
@@ -20,6 +21,7 @@ interface AuthContextType {
   guestLogin: () => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: { username?: string; email?: string } | FormData) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -34,7 +36,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
         const isGuest = localStorage.getItem('isGuest');
-        
+
         if (token && username) {
           const userData = await auth.getCurrentUser();
           setUser({
@@ -47,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             games_won: userData.games_won,
             games_lost: userData.games_lost,
             games_drawn: userData.games_drawn,
+            avatar: userData.avatar,
           });
         }
       } catch (error) {
@@ -74,6 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       games_won: userData.games_won,
       games_lost: userData.games_lost,
       games_drawn: userData.games_drawn,
+      avatar: userData.avatar,
     });
   };
 
@@ -99,8 +103,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const updateProfile = async (data: { username?: string; email?: string } | FormData) => {
+    const updatedData = await auth.updateProfile(data);
+    if (user) {
+      setUser({
+        ...user,
+        ...updatedData
+      });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, guestLogin, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, guestLogin, register, logout, updateProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -24,6 +24,18 @@ class MatchmakingQueue(models.Model):
         default="ANY",
     )
 
+    time_control = models.CharField(
+        max_length=20,
+        choices=[
+            ('bullet', 'Bullet'),
+            ('blitz', 'Blitz'),
+            ('rapid', 'Rapid'),
+            ('classical', 'Classical'),
+            ('unlimited', 'Sem Tempo'),
+        ],
+        default='rapid'
+    )
+
     is_guest = models.BooleanField(default=False)
 
     class Meta:

@@ -8,7 +8,8 @@
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(100%, 72vh); /* Adapta à largura ou altura, garantindo 1:1 */
+  width: min(100%, 72vh);
+  /* Adapta à largura ou altura, garantindo 1:1 */
   max-width: 540px;
   aspect-ratio: 1 / 1;
   margin: 0 auto;
@@ -37,11 +38,19 @@
 }
 
 /* Cores da home */
-.square.white { background-color: var(--chess-light); }
-.square.black { background-color: var(--chess-dark);  }
+.square.white {
+  background-color: var(--chess-light);
+}
+
+.square.black {
+  background-color: var(--chess-dark);
+}
 
 /* Hover */
-.square:hover { filter: brightness(1.1); z-index: 1; }
+.square:hover {
+  filter: brightness(1.1);
+  z-index: 1;
+}
 
 /* Seleccionada — anel amarelo */
 .square.selected {
@@ -51,10 +60,14 @@
 }
 
 /* Movimentos válidos — apenas o .move-indicator div controla o ponto */
-.square.valid-move { cursor: pointer; }
+.square.valid-move {
+  cursor: pointer;
+}
 
 /* Último movimento — amarelo suave */
-.square.highlight { background-color: rgba(205, 210, 106, 0.48) !important; }
+.square.highlight {
+  background-color: rgba(205, 210, 106, 0.48) !important;
+}
 
 /* Rei em xeque — vermelho pulsante */
 .square.king-in-check {
@@ -63,8 +76,15 @@
 }
 
 @keyframes checkPulse {
-  0%, 100% { box-shadow: inset 0 0 0 2px rgba(220,38,38,.85); }
-  50%       { box-shadow: inset 0 0 0 2px rgba(220,38,38,1), 0 0 14px rgba(220,38,38,.35); }
+
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 2px rgba(220, 38, 38, .85);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 2px rgba(220, 38, 38, 1), 0 0 14px rgba(220, 38, 38, .35);
+  }
 }
 
 /* ── Pieces ── */
@@ -127,30 +147,121 @@
   font-family: var(--font-sans);
 }
 
-.square.white .coordinate { color: var(--chess-dark); }
-.square.black .coordinate  { color: var(--chess-light); }
+.square.white .coordinate {
+  color: var(--chess-dark);
+}
 
-.coordinate.file { bottom: 2px; right: 4px; }
-.coordinate.rank { top: 2px; left: 4px; }
+.square.black .coordinate {
+  color: var(--chess-light);
+}
+
+.coordinate.file {
+  bottom: 2px;
+  right: 4px;
+}
+
+.coordinate.rank {
+  top: 2px;
+  left: 4px;
+}
 
 /* ── Touch ── */
 @media (hover: none) and (pointer: coarse) {
-  .square:hover { filter: none; }
-  .square:active { filter: brightness(1.1); }
-  .piece { font-size: clamp(1.3rem, 5.5vw, 2.5rem); }
+  .square:hover {
+    filter: none;
+  }
+
+  .square:active {
+    filter: brightness(1.1);
+  }
+
+  .piece {
+    font-size: clamp(1.3rem, 5.5vw, 2.5rem);
+  }
 }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .chess-board { 
-    max-width: 100%; 
+  .chess-board {
+    max-width: 100%;
     width: 100%;
-    border-width: 2px; 
+    border-width: 2px;
   }
-  .piece { font-size: clamp(1.2rem, 5.5vw, 2.4rem); }
+
+  .piece {
+    font-size: clamp(1.2rem, 5.5vw, 2.4rem);
+  }
 }
 
 @media (max-width: 480px) {
-  .chess-board { max-width: 100%; border-radius: 2px; }
-  .piece { font-size: clamp(1rem, 5vw, 2rem); }
+  .chess-board {
+    max-width: 100%;
+    border-radius: 2px;
+  }
+
+  .piece {
+    font-size: clamp(1rem, 5vw, 2rem);
+  }
+}
+
+/* -- Promotion Menu (Small Vertical Rectangle) -- */
+/* -- Promotion Modal -- */
+.promotion-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  border-radius: 4px;
+  animation: fadeIn 0.15s ease-out;
+  cursor: not-allowed;
+}
+
+.promotion-modal {
+  background: var(--card);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: scaleIn 0.15s ease-out;
+  min-width: 250px;
+  cursor: default;
+}
+
+.promotion-options {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.promotion-option {
+  width: 60px;
+  height: 60px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.promotion-option:hover {
+  background: var(--secondary);
+  transform: translateY(-2px);
+}
+
+.promotion-option img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
 }

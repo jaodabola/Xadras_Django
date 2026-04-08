@@ -64,7 +64,7 @@ const FEATURES = [
   {
     icon: '🏆',
     title: 'Torneios',
-    description: 'Compita em torneios diários e semanais com jogadores de todo o mundo.',
+    description: 'Participe em torneios diários e semanais e demonstre o seu valor contra jogadores de todo o mundo.',
     href: '/play',
   },
   {
@@ -111,12 +111,12 @@ const Home: React.FC = () => {
 
           {/* Left */}
           <div className="hero-left">
-            {/* Online badge */}
+            {/* Online badge
             <div className="hero-badge">
               <span className="badge-dot" />
               <span>1.247 jogadores online</span>
             </div>
-
+            */}
             {/* Title */}
             <h1 className="hero-title">
               Jogue Xadrez.
@@ -125,8 +125,8 @@ const Home: React.FC = () => {
 
             {/* Subtitle */}
             <p className="hero-subtitle">
-              Junte-se a milhares de jogadores em todo o mundo. Compita em partidas,
-              suba no ranking e prove as suas habilidades no Xadras.
+              Junte-se à nossa comunidade de xadrez. Dispute partidas,
+              suba no ranking e demonstre as suas capacidades no Xadras.
             </p>
 
             {/* CTA buttons */}
@@ -142,8 +142,8 @@ const Home: React.FC = () => {
             {user && user.isGuest && (
               <div className="guest-notice">
                 <p>
-                  A jogar como convidado.{' '}
-                  <Link to="/register" className="register-link">Cria uma conta</Link>
+                  A utilizar a conta de convidado.{' '}
+                  <Link to="/register" className="register-link">Crie uma conta</Link>
                   {' '}para desbloquear todas as funcionalidades.
                 </p>
               </div>
@@ -166,7 +166,7 @@ const Home: React.FC = () => {
 
           {/* Header */}
           <div className="features-header">
-            <h2 className="features-title">Tudo o que precisas para jogar</h2>
+            <h2 className="features-title">Tudo o que necessita para jogar</h2>
             <p className="features-subtitle">Simples, rápido e feito para amantes de xadrez.</p>
           </div>
 

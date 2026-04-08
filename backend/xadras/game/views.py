@@ -162,8 +162,14 @@ class GameViewSet(viewsets.ModelViewSet):
             game.black_player.update_statistics('draw')
         
         # Calculate new ELO ratings
-        game.white_player.calculate_elo(game.black_player.elo_rating, result)
-        game.black_player.calculate_elo(game.white_player.elo_rating, 'BLACK_WIN' if result == 'WHITE_WIN' else 'WHITE_WIN' if result == 'BLACK_WIN' else 'DRAW')
+        white_win_status = 'win' if result == 'WHITE_WIN' else 'loss' if result == 'BLACK_WIN' else 'draw'
+        black_win_status = 'win' if result == 'BLACK_WIN' else 'loss' if result == 'WHITE_WIN' else 'draw'
+        
+        new_white_elo = game.white_player.calculate_elo(game.black_player.elo_rating, white_win_status)
+        new_black_elo = game.black_player.calculate_elo(game.white_player.elo_rating, black_win_status)
+        
+        game.white_player.elo_rating = new_white_elo
+        game.black_player.elo_rating = new_black_elo
         
         # Save updated statistics
         game.white_player.save()

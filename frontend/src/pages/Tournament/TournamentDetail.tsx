@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament } from '../../contexts/TournamentContext';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
+import TournamentEditForm from './components/TournamentEditForm';
+import TournamentInfoTab from './components/TournamentInfoTab';
+import TournamentPairingsTab from './components/TournamentPairingsTab';
+import TournamentStandingsTab from './components/TournamentStandingsTab';
+import TournamentDeleteModal from './components/TournamentDeleteModal';
 import './TournamentDetail.css';
 
 interface Pairing {
@@ -297,158 +302,14 @@ const TournamentDetail: React.FC = () => {
         {/* Hero Header Section */}
         <div className="detail-header glass-card animate-slide-up">
           {isEditing ? (
-            <div className="edit-form">
-              <h3 className="edit-form-title">✏️ Editar Torneio</h3>
-
-              {/* Row 1: Name */}
-              <div className="form-group">
-                <label>Nome do Torneio</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                  className="game-input"
-                />
-              </div>
-
-              {/* Row 2: Format + Max Participants */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Formato</label>
-                  <select
-                    value={editForm.tournament_type}
-                    onChange={e => setEditForm({ ...editForm, tournament_type: e.target.value })}
-                    className="game-select"
-                    disabled={selectedTournament.status !== 'REGISTRATION'}
-                  >
-                    <option value="SWISS">Sistema Suíço</option>
-                    <option value="ROUND_ROBIN">Todos Contra Todos</option>
-                    <option value="ELIMINATION">Eliminação Direta</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Máx. Participantes</label>
-                  <input
-                    type="number"
-                    min="2" max="256"
-                    value={editForm.max_participants}
-                    onChange={e => setEditForm({ ...editForm, max_participants: parseInt(e.target.value) })}
-                    className="game-input"
-                    disabled={selectedTournament.status !== 'REGISTRATION'}
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Time Control + Increment */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Controlo de Tempo</label>
-                  <select
-                    value={editForm.time_control}
-                    onChange={e => setEditForm({ ...editForm, time_control: e.target.value })}
-                    className="game-select"
-                  >
-                    <option value="">Selecionar...</option>
-                    <option value="1+0">1 min (Bullet)</option>
-                    <option value="2+1">2+1 min (Bullet)</option>
-                    <option value="3+0">3 min (Blitz)</option>
-                    <option value="3+2">3+2 min (Blitz)</option>
-                    <option value="5+0">5 min (Blitz)</option>
-                    <option value="5+3">5+3 min (Blitz)</option>
-                    <option value="10+0">10 min (Rápido)</option>
-                    <option value="10+5">10+5 min (Rápido)</option>
-                    <option value="15+10">15+10 min (Rápido)</option>
-                    <option value="30+0">30 min (Clássico)</option>
-                    <option value="60+0">60 min (Clássico)</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Incremento (seg)</label>
-                  <input
-                    type="number"
-                    min="0" max="60"
-                    value={editForm.increment}
-                    onChange={e => setEditForm({ ...editForm, increment: parseInt(e.target.value) || 0 })}
-                    className="game-input"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Registration Deadline + Start Date */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Prazo de Inscrição</label>
-                  <input
-                    type="datetime-local"
-                    value={editForm.registration_deadline}
-                    onChange={e => setEditForm({ ...editForm, registration_deadline: e.target.value })}
-                    className="game-input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Data de Início</label>
-                  <input
-                    type="datetime-local"
-                    value={editForm.start_date}
-                    onChange={e => setEditForm({ ...editForm, start_date: e.target.value })}
-                    className="game-input"
-                  />
-                </div>
-              </div>
-
-              {/* Row 5: Toggles */}
-              <div className="form-row">
-                <div className="form-group toggle-group">
-                  <label className="toggle-label">
-                    <input
-                      type="checkbox"
-                      checked={editForm.is_public}
-                      onChange={e => setEditForm({ ...editForm, is_public: e.target.checked })}
-                      className="toggle-checkbox"
-                    />
-                    <span className="toggle-text">🌐 Torneio Público</span>
-                  </label>
-                  <span className="toggle-hint">Visível para todos os utilizadores</span>
-                </div>
-                <div className="form-group toggle-group">
-                  <label className="toggle-label">
-                    <input
-                      type="checkbox"
-                      checked={editForm.vision_enabled}
-                      onChange={e => setEditForm({ ...editForm, vision_enabled: e.target.checked })}
-                      className="toggle-checkbox"
-                    />
-                    <span className="toggle-text">📹 Vision AI Ativado</span>
-                  </label>
-                  <span className="toggle-hint">Reconhecimento automático de posições</span>
-                </div>
-              </div>
-
-              {/* Row 6: Description */}
-              <div className="form-group">
-                <label>Descrição</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
-                  className="game-input textarea"
-                  rows={3}
-                  placeholder="Descreve o torneio, regras especiais, prémios..."
-                />
-              </div>
-
-              {selectedTournament.status !== 'REGISTRATION' && (
-                <div className="edit-warning">
-                  ⚠️ Formato e capacidade não podem ser alterados após o torneio ter começado.
-                </div>
-              )}
-
-              <div className="edit-actions">
-                <button className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={handleSaveEdit} disabled={actionLoading === 'saving'}>
-                  {actionLoading === 'saving' ? <LoadingSpinner size="small" /> : '💾 Guardar Alterações'}
-                </button>
-              </div>
-            </div>
+            <TournamentEditForm 
+              editForm={editForm}
+              setEditForm={setEditForm}
+              selectedTournament={selectedTournament}
+              actionLoading={actionLoading}
+              onSave={handleSaveEdit}
+              onCancel={() => setIsEditing(false)}
+            />
           ) : (
             <>
               <div className="header-top-row">
@@ -600,161 +461,26 @@ const TournamentDetail: React.FC = () => {
 
         {/* Tab Content */}
         <div className="tab-content animate-slide-up">
-          {activeTab === 'info' && (
-            <div className="info-tab">
-              <div className="info-section glass-card">
-                <h3>Lista Oficial de Participantes ({participants.length})</h3>
-                {participants.length > 0 ? (
-                  <div className="participants-grid">
-                    {participants.map((participant: any, index: number) => (
-                      <div key={participant.id || index} className="participant-card">
-                        <div className="participant-avatar">
-                          {participant.username ? participant.username.charAt(0).toUpperCase() : '?'}
-                        </div>
-                        <div className="participant-info">
-                          <div className="participant-name">{participant.username || participant.name}</div>
-                          <div className="participant-elo">ELO: {participant.elo_rating || participant.initial_rating || 1200}</div>
-                        </div>
-                        <div className="participant-seed">
-                          #{index + 1}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <div className="empty-icon">👥</div>
-                    <p>Ainda não há participantes inscritos neste torneio.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+          {activeTab === 'info' && <TournamentInfoTab participants={participants} />}
           {activeTab === 'pairings' && (
-            <div className="pairings-tab glass-card">
-              {pairings.length > 0 ? (
-                <div className="pairings-list">
-                  <h3>Jogos da Ronda</h3>
-                  {pairings.map((pairing) => (
-                    <div key={pairing.id} className="pairing-card">
-                      <div className="pairing-header">
-                        <span className="round-badge">Ronda {pairing.round_number}</span>
-                        {pairing.physical_board_id && (
-                          <span className="board-badge">Mesa: 📹 {pairing.physical_board_id}</span>
-                        )}
-                      </div>
-                      <div className="pairing-players">
-                        <div className="player white-player">
-                          <span className="player-indicator white"></span>
-                          <span className="player-name">{pairing.white_player.username}</span>
-                        </div>
-                        <div className="vs-divider">VS</div>
-                        {pairing.black_player ? (
-                          <div className="player black-player">
-                            <span className="player-indicator black"></span>
-                            <span className="player-name">{pairing.black_player.username}</span>
-                          </div>
-                        ) : pairing.bye_player ? (
-                          <div className="player bye-player">
-                            <span className="bye-badge">Folga (BYE)</span>
-                          </div>
-                        ) : null}
-                      </div>
-                      {pairing.result && (
-                        <div className="pairing-result">
-                          Resultado: <strong>{pairing.result}</strong>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <div className="empty-icon">🎯</div>
-                  <p>Ainda não existem rondas criadas.</p>
-                  {isOrganizer && selectedTournament.status === 'REGISTRATION' && (
-                    <p className="help-text">Utiliza o botão "Gerar Emparelhamentos" acima para iniciar!</p>
-                  )}
-                </div>
-              )}
-            </div>
+            <TournamentPairingsTab 
+              pairings={pairings} 
+              isOrganizer={!!isOrganizer} 
+              status={selectedTournament.status} 
+            />
           )}
-
-          {activeTab === 'standings' && (
-            <div className="standings-tab glass-card">
-              {standings.length > 0 ? (
-                <div className="standings-table-wrap">
-                  <table className="standings-table">
-                    <thead>
-                      <tr>
-                        <th>Posição</th>
-                        <th>Jogador</th>
-                        <th>Pontos</th>
-                        <th>Jogos</th>
-                        <th>V/E/D</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {standings.map((standing, index) => (
-                        <tr key={standing.player_id || index}>
-                          <td className="rank-cell">
-                            <span className={`rank-badge ${index < 3 ? 'top-3' : ''}`}>
-                              {index + 1}
-                            </span>
-                          </td>
-                          <td className="player-cell">{standing.player_name || standing.username}</td>
-                          <td className="score-cell"><strong>{standing.score}</strong></td>
-                          <td>{standing.games_played}</td>
-                          <td>{standing.wins} / {standing.draws} / {standing.losses}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <div className="empty-icon">🏆</div>
-                  <p>A classificação final ou parcial ainda não está disponível.</p>
-                  <p className="help-text">Aguardando a conclusão da primeira ronda.</p>
-                </div>
-              )}
-            </div>
-          )}
+          {activeTab === 'standings' && <TournamentStandingsTab standings={standings} />}
         </div>
       </div>
+      
       {/* Modal de confirmação para apagar */}
-      {showDeleteModal && (
-        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-icon">🗑️</div>
-            <h3>Apagar Torneio</h3>
-            <p>
-              Tem a certeza que pretende apagar o torneio{' '}
-              <strong>{selectedTournament?.name}</strong>?
-            </p>
-            <div className="modal-warning-text">
-              ⚠️ Esta ação é irreversível. Todos os dados, participantes e histórico de jogos associados serão permanentemente eliminados.
-            </div>
-            <div className="modal-actions">
-              <button
-                className="btn-delete-cancel"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={actionLoading === 'deleting'}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn-delete-confirm"
-                onClick={handleDeleteTournament}
-                disabled={actionLoading === 'deleting'}
-              >
-                {actionLoading === 'deleting' ? <LoadingSpinner size="small" /> : '🗑 Apagar Definitivamente'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TournamentDeleteModal 
+        isOpen={showDeleteModal}
+        tournamentName={selectedTournament?.name}
+        actionLoading={actionLoading}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteTournament}
+      />
     </div>
   );
 };

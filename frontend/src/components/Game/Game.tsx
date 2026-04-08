@@ -116,27 +116,44 @@ const Game: React.FC = () => {
     // Only enable WebSocket for online games (with gameId)
     if (!gameId) return;
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${wsProtocol}://${window.location.hostname}:8000/ws/game/${gameId}/`;
-    console.log('[Game] Setting up WebSocket for game:', gameId, wsUrl);
+    let ws: WebSocket | null = null;
+    let reconnectTimeoutId: NodeJS.Timeout | null = null;
+    let isComponentMounted = true;
+    let reconnectAttempts = 0;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const connectWebSocket = () => {
+      if (!isComponentMounted) return;
 
-    ws.onopen = () => {
-      console.log('[Game] WebSocket connected for game:', gameId);
-    };
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const wsUrl = `${wsProtocol}://${window.location.hostname}:8000/ws/game/${gameId}/`;
+      console.log(`[Game] Setting up WebSocket for game: ${gameId} (Attempt ${reconnectAttempts + 1})`);
 
-    ws.onerror = (error) => {
-      console.error('[Game] WebSocket error:', error);
-    };
+      ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    ws.onclose = (event) => {
-      console.log('[Game] WebSocket closed:', event.code, event.reason);
-      if (wsRef.current === ws) {
-        wsRef.current = null;
-      }
-    };
+      ws.onopen = () => {
+        console.log('[Game] WebSocket connected for game:', gameId);
+        reconnectAttempts = 0; // reset attempts
+      };
+
+      ws.onerror = (error) => {
+        console.error('[Game] WebSocket error:', error);
+      };
+
+      ws.onclose = (event) => {
+        console.log('[Game] WebSocket closed:', event.code, event.reason);
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+        }
+
+        // Auto-reconnect logic
+        if (isComponentMounted) {
+          const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 10000); // Exponential backoff max 10s
+          console.log(`[Game] Attempting to reconnect in ${delay}ms...`);
+          reconnectTimeoutId = setTimeout(connectWebSocket, delay);
+          reconnectAttempts++;
+        }
+      };
 
     const handleWebSocketMessage = (event: MessageEvent) => {
       console.log('[Game] WebSocket message received:', event.data);
@@ -192,7 +209,11 @@ const Game: React.FC = () => {
           }
         } else if (data.type === 'resign') {
           const winner = data.color === 'w' ? 'b' : 'w';
-          setResignationWinner(winner);
+          if (data.reason === 'timeout') {
+            setTimeoutWinner(winner);
+          } else {
+            setResignationWinner(winner);
+          }
         } else if (data.type === 'board_update') {
           // Vision AI board updates are handled in a dedicated interface.
           // For the classic digital-vs-digital game view we only log them.
@@ -205,11 +226,19 @@ const Game: React.FC = () => {
       }
     };
 
-    ws.onmessage = handleWebSocketMessage;
+      ws.onmessage = handleWebSocketMessage;
+    };
+
+    connectWebSocket();
 
     return () => {
       console.log('[Game] Cleaning up WebSocket for game:', gameId);
-      ws.close();
+      isComponentMounted = false;
+      if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId);
+      if (ws) {
+        ws.onclose = null; // Prevent reconnect on explicit unmount
+        ws.close();
+      }
       if (wsRef.current === ws) {
         wsRef.current = null;
       }
@@ -251,7 +280,12 @@ const Game: React.FC = () => {
         reason: 'timeout'
       }));
     }
-  }, []);
+    if (gameId) {
+      api.post(`/game/${gameId}/end/`, {
+        result: loserColor === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
+      }).catch(err => console.error('Error ending game on timeout:', err));
+    }
+  }, [gameId]);
 
   // ── Relógio ──
   const userColor = gameData?.white_player?.id === currentUser?.id ? 'w'
@@ -536,6 +570,11 @@ const Game: React.FC = () => {
           type: 'resign',
           color: myColor
         }));
+      }
+      if (gameId) {
+        api.post(`/game/${gameId}/end/`, {
+          result: myColor === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
+        }).catch(err => console.error('Error ending game on resign:', err));
       }
       setResignationWinner(myColor === 'w' ? 'b' : 'w');
     }

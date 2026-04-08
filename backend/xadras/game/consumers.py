@@ -201,12 +201,14 @@ class GameConsumer(AsyncWebsocketConsumer):
             self.game_group_name,
             {
                 'type': 'game_resign',
-                'color': data.get('color')
+                'color': data.get('color'),
+                'reason': data.get('reason')
             }
         )
 
     async def game_resign(self, event):
         await self.send(text_data=json.dumps({
             'type': 'resign',
-            'color': event.get('color')
+            'color': event.get('color'),
+            'reason': event.get('reason')
         }))

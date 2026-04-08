@@ -40,15 +40,20 @@ class WebSocketRateLimitMiddleware:
     @staticmethod
     def check_connection_limit(user, ip_address):
         """Check if user/IP has exceeded WebSocket connection limits"""
-        user_key = f"ws_connections_user_{user.id if user.is_authenticated else 'anonymous'}"
+        # Para utilizadores anónimos/guests, usar IP como identificador
+        if user.is_authenticated:
+            user_key = f"ws_connections_user_{user.id}"
+        else:
+            user_key = f"ws_connections_ip_{ip_address}"
+        
         ip_key = f"ws_connections_ip_{ip_address}"
         
         user_connections = cache.get(user_key, 0)
         ip_connections = cache.get(ip_key, 0)
         
-        # Limits from security config
-        MAX_CONNECTIONS_PER_USER = 5
-        MAX_CONNECTIONS_PER_IP = 20
+        # Limits
+        MAX_CONNECTIONS_PER_USER = 10
+        MAX_CONNECTIONS_PER_IP = 50
         
         if user_connections >= MAX_CONNECTIONS_PER_USER:
             return False, f"User connection limit exceeded ({MAX_CONNECTIONS_PER_USER})"
@@ -61,29 +66,35 @@ class WebSocketRateLimitMiddleware:
     @staticmethod
     def increment_connection_count(user, ip_address):
         """Increment connection counters"""
-        user_key = f"ws_connections_user_{user.id if user.is_authenticated else 'anonymous'}"
+        if user.is_authenticated:
+            user_key = f"ws_connections_user_{user.id}"
+        else:
+            user_key = f"ws_connections_ip_{ip_address}"
         ip_key = f"ws_connections_ip_{ip_address}"
         
-        # Increment with 1 hour expiry
-        cache.set(user_key, cache.get(user_key, 0) + 1, 3600)
-        cache.set(ip_key, cache.get(ip_key, 0) + 1, 3600)
+        # TTL curto (5 min) para evitar contadores stale após reiniciar servidor
+        cache.set(user_key, cache.get(user_key, 0) + 1, 300)
+        cache.set(ip_key, cache.get(ip_key, 0) + 1, 300)
     
     @staticmethod
     def decrement_connection_count(user, ip_address):
         """Decrement connection counters"""
-        user_key = f"ws_connections_user_{user.id if user.is_authenticated else 'anonymous'}"
+        if user.is_authenticated:
+            user_key = f"ws_connections_user_{user.id}"
+        else:
+            user_key = f"ws_connections_ip_{ip_address}"
         ip_key = f"ws_connections_ip_{ip_address}"
         
         user_count = max(0, cache.get(user_key, 0) - 1)
         ip_count = max(0, cache.get(ip_key, 0) - 1)
         
         if user_count > 0:
-            cache.set(user_key, user_count, 3600)
+            cache.set(user_key, user_count, 300)
         else:
             cache.delete(user_key)
         
         if ip_count > 0:
-            cache.set(ip_key, ip_count, 3600)
+            cache.set(ip_key, ip_count, 300)
         else:
             cache.delete(ip_key)
 

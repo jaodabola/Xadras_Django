@@ -5,6 +5,7 @@ import GameControls from '../GameControls/GameControls';
 import MoveHistory from '../MoveHistory/MoveHistory';
 import CapturedPieces from '../CapturedPieces/CapturedPieces';
 import CameraMode from '../CameraMode/CameraMode';
+import { ClockPanel, useGameClock } from '../GameClock/GameClock';
 import type { MovePair } from '../../types';
 import './Game.css';
 
@@ -35,6 +36,7 @@ const Game: React.FC = () => {
   const [gameData, setGameData] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [resignationWinner, setResignationWinner] = useState<'w' | 'b' | null>(null);
+  const [timeoutWinner, setTimeoutWinner] = useState<'w' | 'b' | null>(null);
 
   // Refs after state
   const wsRef = useRef<WebSocket | null>(null);
@@ -160,21 +162,22 @@ const Game: React.FC = () => {
 
           // Update local move history (mirror of handleMove logic)
           setMoveHistory((prevHistory) => {
-            const currentIndex = prevHistory.length - 1;
-            const newMoveHistory = prevHistory.slice(0, currentIndex + 1);
-            const lastMove =
-              newMoveHistory[newMoveHistory.length - 1] || { white: '', black: '' };
+            const newHistory = [...prevHistory];
 
             if (gameRef.current.turn() === 'b') {
-              // White has just moved
-              lastMove.white = moveResult.san || san;
+              // White has just moved — novo par
+              newHistory.push({ white: moveResult.san || san, black: '' });
             } else {
-              // Black has just moved
-              lastMove.black = moveResult.san || san;
-              newMoveHistory.push({ ...lastMove });
+              // Black has just moved — completar último par
+              if (newHistory.length > 0) {
+                newHistory[newHistory.length - 1] = {
+                  ...newHistory[newHistory.length - 1],
+                  black: moveResult.san || san,
+                };
+              }
             }
 
-            return newMoveHistory;
+            return newHistory;
           });
 
           setCurrentMoveIndex((prev) => prev + 1);
@@ -237,7 +240,40 @@ const Game: React.FC = () => {
     setCameraMode(prev => !prev);
   }, []);
 
-  // ... (all other hooks and logic) ...
+  // handleTimeout: tem de estar ANTES dos early returns (regras dos hooks)
+  const handleTimeout = useCallback((loserColor: 'w' | 'b') => {
+    const winner = loserColor === 'w' ? 'b' : 'w';
+    setTimeoutWinner(winner);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'resign',
+        color: loserColor,
+        reason: 'timeout'
+      }));
+    }
+  }, []);
+
+  // ── Relógio ──
+  const userColor = gameData?.white_player?.id === currentUser?.id ? 'w'
+    : gameData?.black_player?.id === currentUser?.id ? 'b'
+    : null;
+
+  const totalMoves = moveHistory.reduce((n, p) => n + (p.white ? 1 : 0) + (p.black ? 1 : 0), 0);
+
+  const clock = useGameClock({
+    timeControl: gameData?.time_control || 'unlimited',
+    activeColor: gameRef.current.turn(),
+    isGameOver: !!(resignationWinner || timeoutWinner),
+    onTimeout: handleTimeout,
+    moveCount: totalMoves,
+  });
+
+  // Painel de cima = adversário; painel de baixo = utilizador
+  const topColor:    'w' | 'b' = userColor === 'w' ? 'b' : 'w';
+  const bottomColor: 'w' | 'b' = userColor === 'w' ? 'w' : 'b';
+
+  const topLabel    = topColor    === 'w' ? (gameData?.white_player?.username || 'Brancas') : (gameData?.black_player?.username || 'Pretas');
+  const bottomLabel = bottomColor === 'w' ? (gameData?.white_player?.username || 'Brancas') : (gameData?.black_player?.username || 'Pretas');
 
   if (loading) {
     return <div className="game-loading">A carregar partida...</div>;
@@ -303,16 +339,22 @@ const Game: React.FC = () => {
     }
     // Atualizar histórico local
     setMoveHistory(prevHistory => {
-      const currentIndex = prevHistory.length - 1;
-      const newMoveHistory = prevHistory.slice(0, currentIndex + 1);
-      const lastMove = newMoveHistory[newMoveHistory.length - 1] || { white: '', black: '' };
+      const newHistory = [...prevHistory];
+
       if (gameRef.current.turn() === 'b') {
-        lastMove.white = move.san || '';
+        // White just moved — novo par
+        newHistory.push({ white: move.san || '', black: '' });
       } else {
-        lastMove.black = move.san || '';
-        newMoveHistory.push({ ...lastMove });
+        // Black just moved — completar último par
+        if (newHistory.length > 0) {
+          newHistory[newHistory.length - 1] = {
+            ...newHistory[newHistory.length - 1],
+            black: move.san || '',
+          };
+        }
       }
-      return newMoveHistory;
+
+      return newHistory;
     });
     setCurrentMoveIndex(prev => prev + 1);
     if (move.captured) {
@@ -499,7 +541,22 @@ const Game: React.FC = () => {
     }
   };
 
+  // handleTimeout movido para antes dos early returns (ver acima)
+
   const getGameOverMessage = () => {
+    if (timeoutWinner) {
+      if (gameId && gameData && currentUser) {
+        const isUserWhite = gameData.white_player?.id === currentUser.id;
+        const isUserBlack = gameData.black_player?.id === currentUser.id;
+        if (timeoutWinner === 'w' && isUserWhite) return 'Parabéns, ganhou por tempo esgotado do adversário!';
+        if (timeoutWinner === 'b' && isUserBlack) return 'Parabéns, ganhou por tempo esgotado do adversário!';
+        if (timeoutWinner === 'w' && isUserBlack) return 'Perdeu por tempo esgotado.';
+        if (timeoutWinner === 'b' && isUserWhite) return 'Perdeu por tempo esgotado.';
+        return timeoutWinner === 'w' ? 'Vitória das Brancas por tempo esgotado' : 'Vitória das Pretas por tempo esgotado';
+      }
+      return timeoutWinner === 'w' ? 'Vitória das Brancas por tempo esgotado' : 'Vitória das Pretas por tempo esgotado';
+    }
+
     if (resignationWinner) {
       if (gameId && gameData && currentUser) {
         const isUserWhite = gameData.white_player?.id === currentUser.id;
@@ -545,7 +602,7 @@ const Game: React.FC = () => {
     return 'Jogo terminado.';
   };
 
-  const gameOverMessage = (gameId && (gameRef.current.isGameOver() || resignationWinner)) ? getGameOverMessage() : null;
+  const gameOverMessage = (gameId && (gameRef.current.isGameOver() || resignationWinner || timeoutWinner)) ? getGameOverMessage() : null;
 
   return (
     <div ref={containerRef} className={`game-container ${isFullscreen ? 'fullscreen' : ''}`}>
@@ -619,6 +676,18 @@ const Game: React.FC = () => {
             </button>
           )}
 
+          {/* Relógio TOPO — adversário, colado ao tabuleiro */}
+          {gameId && gameData && (
+            <ClockPanel
+              label={topLabel}
+              time={topColor === 'w' ? clock.white.time : clock.black.time}
+              isActive={totalMoves > 0 && gameRef.current.turn() === topColor}
+              isLow={topColor === 'w' ? clock.white.isLow : clock.black.isLow}
+              isUnlimited={clock.isUnlimited}
+              timeControl={gameData.time_control || 'unlimited'}
+            />
+          )}
+
           <ChessBoard
             position={gameRef.current.fen()}
             orientation={
@@ -630,6 +699,18 @@ const Game: React.FC = () => {
             lastMove={getLastMove()}
             interactive={canUserInteract()}
           />
+
+          {/* Relógio BAIXO — utilizador, colado ao tabuleiro */}
+          {gameId && gameData && (
+            <ClockPanel
+              label={bottomLabel}
+              time={bottomColor === 'w' ? clock.white.time : clock.black.time}
+              isActive={totalMoves > 0 && gameRef.current.turn() === bottomColor}
+              isLow={bottomColor === 'w' ? clock.white.isLow : clock.black.isLow}
+              isUnlimited={clock.isUnlimited}
+              timeControl={gameData.time_control || 'unlimited'}
+            />
+          )}
         </div>
 
         <div className="game-info">

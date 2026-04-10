@@ -17,6 +17,10 @@ class Game(models.Model):
     BLACK_WIN = 'BLACK_WIN'
     DRAW = 'DRAW'
 
+    # Game type constants
+    ONLINE = 'ONLINE'
+    LIVE_CAPTURE = 'LIVE_CAPTURE'
+
     STATUS_CHOICES = [
         (PENDING, 'Pending'),
         (IN_PROGRESS, 'In Progress'),
@@ -29,6 +33,11 @@ class Game(models.Model):
         (DRAW, 'Draw')
     ]
 
+    GAME_TYPE_CHOICES = [
+        (ONLINE, 'Online'),
+        (LIVE_CAPTURE, 'Live Capture'),
+    ]
+
     white_player = models.ForeignKey(
         User, related_name='white_games', on_delete=models.CASCADE)
     black_player = models.ForeignKey(
@@ -37,6 +46,8 @@ class Game(models.Model):
         max_length=20, choices=STATUS_CHOICES, default='PENDING')
     result = models.CharField(
         max_length=20, choices=RESULT_CHOICES, null=True, blank=True)
+    game_type = models.CharField(
+        max_length=20, choices=GAME_TYPE_CHOICES, default='ONLINE')
     time_control = models.CharField(
         max_length=20,
         choices=[

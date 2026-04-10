@@ -1,0 +1,242 @@
+/* ═══════════════════════════════════════════════════════
+   Game Replay — Revisão de partidas
+   ═══════════════════════════════════════════════════════ */
+
+.replay-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.replay-loading,
+.replay-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 0;
+  color: var(--muted-fg);
+  text-align: center;
+}
+
+.replay-error span {
+  font-size: 2.5rem;
+}
+
+/* ── Header ── */
+
+.replay-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--muted-fg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  transition: color 0.15s ease;
+}
+
+.replay-back:hover {
+  color: var(--primary);
+}
+
+.replay-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.replay-title-row h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin: 0;
+}
+
+.replay-result {
+  padding: 0.3rem 0.75rem;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 1rem;
+  font-family: var(--font-sans);
+}
+
+.replay-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted-fg);
+  flex-wrap: wrap;
+}
+
+.replay-vs {
+  color: var(--muted-fg);
+  font-size: 0.75rem;
+}
+
+.replay-separator {
+  color: var(--border);
+}
+
+/* ── Main Content (Board + Sidebar) ── */
+
+.replay-content {
+  display: grid;
+  grid-template-columns: minmax(300px, 500px) 1fr;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  align-items: start;
+}
+
+.replay-board-wrapper {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.replay-board-wrapper .chess-board {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Sidebar ── */
+
+.replay-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Controls ── */
+
+.replay-controls {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.75rem;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.control-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+
+.control-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.control-btn.play-btn {
+  width: 52px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+
+.control-btn.play-btn:hover {
+  background: #6b5347;
+}
+
+.control-btn.play-btn.playing {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* ── Move Counter ── */
+
+.replay-move-counter {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted-fg);
+  font-weight: 500;
+}
+
+/* ── Move List ── */
+
+.replay-move-list {
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem;
+}
+
+.move-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  transition: background 0.1s ease;
+}
+
+.move-item:hover {
+  background: var(--secondary);
+}
+
+.move-item.active {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.move-number {
+  font-weight: 700;
+  min-width: 2rem;
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+}
+
+.move-item.active .move-number {
+  color: var(--primary-fg);
+  opacity: 0.7;
+}
+
+.move-color {
+  font-size: 0.75rem;
+}
+
+.move-text {
+  font-weight: 500;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+  .replay-content {
+    grid-template-columns: 1fr;
+  }
+
+  .replay-board-wrapper {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .replay-move-list {
+    max-height: 250px;
+  }
+}

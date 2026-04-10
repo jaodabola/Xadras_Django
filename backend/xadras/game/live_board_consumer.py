@@ -1,19 +1,20 @@
 """
 Consumer WebSocket para deteção de tabuleiro em direto.
 
-Versão simplificada: o browser liga-se a este WebSocket com um
-session_id e fica à escuta. A app do telemóvel envia o FEN via
-endpoint REST (LiveBoardFenView), que faz broadcast para aqui.
-
-Já não processa frames de vídeo no servidor.
+O browser liga-se com um session_id e fica à escuta.
+A app do telemóvel envia FEN via WebSocket, que é retransmitido
+para o browser e guardado na BD para revisão futura.
 """
 
 import json
 import logging
 from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class LiveBoardConsumer(AsyncWebsocketConsumer):
@@ -22,8 +23,8 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
 
     Protocolo:
         1. Browser liga-se com: ws://host/ws/live-board/?session=<session_id>
-        2. App do telemóvel envia FEN via POST /api/game/live-board/fen/
-        3. O servidor retransmite o FEN para o browser através deste consumer.
+        2. App do telemóvel envia FEN via WebSocket (type: fen_update)
+        3. O servidor guarda o move na BD e retransmite para o browser.
 
     Mensagens enviadas ao browser:
         { "type": "detection_result", "fen": "...", "board_detected": true, ... }
@@ -31,21 +32,19 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         """Aceitar ligação e juntar ao grupo de sessão."""
-        # Extrair session_id dos query params
         query_string = self.scope.get('query_string', b'').decode('utf-8')
         params = parse_qs(query_string)
         self.session_id = params.get('session', [''])[0]
 
         if not self.session_id:
-            # Sem session_id — recusar ligação
             logger.warning('LiveBoard WS ligação recusada: session_id em falta')
             await self.close(code=4000)
             return
 
-        # Nome do grupo = live_board_<session_id>
         self.group_name = f'live_board_{self.session_id}'
+        self.game_id = None       # Será criado no primeiro FEN
+        self.last_fen = None      # Último FEN guardado (evitar duplicados)
 
-        # Juntar ao grupo do channel layer
         await self.channel_layer.group_add(
             self.group_name,
             self.channel_name,
@@ -57,7 +56,6 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
             f'(sessão: {self.session_id})'
         )
 
-        # Mensagem de boas-vindas
         await self.send(text_data=json.dumps({
             'type': 'connection_established',
             'message': 'Ligação ao detetor de tabuleiro estabelecida',
@@ -79,7 +77,7 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
 
         Suporta:
         - 'ping': keep-alive
-        - 'fen_update': FEN enviado pelo telemóvel → broadcast para o grupo
+        - 'fen_update': FEN enviado pelo telemóvel → guardar + broadcast
         """
         try:
             data = json.loads(text_data)
@@ -89,22 +87,30 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({'type': 'pong'}))
 
             elif msg_type == 'fen_update':
-                # Relay direto — o FEN já foi validado no Android (chesslib)
-                fen = data.get('fen', '')
-                session_id = data.get('session_id', self.session_id)
+                fen = data.get('fen', '').strip()
+                if not fen or fen == self.last_fen:
+                    return  # Ignorar duplicados
 
-                if fen:
-                    await self.channel_layer.group_send(
-                        self.group_name,
-                        {
-                            'type': 'fen_update',
-                            'fen': fen,
-                            'board_detected': True,
-                            'session_id': session_id,
-                            'utilizador': '',
-                        },
-                    )
-                    logger.debug(f'FEN relay via WS: {fen[:30]}...')
+                # Extrair utilizador do scope (se autenticado via token)
+                user = self.scope.get('user')
+
+                # Guardar na BD (cria Game se necessário, gere takebacks)
+                game_id = await self._persist_fen(fen, user)
+
+                self.last_fen = fen
+
+                # Broadcast para todos os clientes na sessão
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        'type': 'fen_update',
+                        'fen': fen,
+                        'board_detected': True,
+                        'session_id': self.session_id,
+                        'game_id': game_id,
+                        'utilizador': user.username if user and hasattr(user, 'username') else '',
+                    },
+                )
 
             else:
                 logger.debug(f'Tipo de mensagem ignorado: {msg_type}')
@@ -112,25 +118,97 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError:
             logger.error('JSON inválido recebido no LiveBoardConsumer')
 
+    # ---- Persistência na BD ----
+
+    @database_sync_to_async
+    def _persist_fen(self, fen, user):
+        """
+        Guardar FEN na BD com suporte a takebacks.
+
+        Lógica:
+        1. Se não existe Game para esta sessão → criar um novo
+        2. Se o FEN é igual a um FEN anterior na história → takeback
+           (apagar moves posteriores)
+        3. Se é um FEN novo → criar novo Move
+        """
+        from .models import Game, Move
+
+        # 1. Criar Game se necessário
+        if self.game_id is None:
+            game = Game.objects.create(
+                white_player=user if user and user.is_authenticated else User.objects.first(),
+                status='IN_PROGRESS',
+                game_type='LIVE_CAPTURE',
+                time_control='unlimited',
+                fen_string=fen,
+            )
+            self.game_id = game.id
+            logger.info(f'Game #{game.id} criado para sessão {self.session_id}')
+            return self.game_id
+
+        game = Game.objects.get(id=self.game_id)
+
+        # 2. Verificar se é um takeback (FEN já existe na história)
+        existing_move = (
+            Move.objects
+            .filter(game=game, fen_after=fen)
+            .order_by('move_number')
+            .first()
+        )
+
+        if existing_move:
+            # É um takeback! Apagar todos os moves após este
+            deleted, _ = (
+                Move.objects
+                .filter(game=game, move_number__gt=existing_move.move_number)
+                .delete()
+            )
+            game.fen_string = fen
+            game.save(update_fields=['fen_string', 'updated_at'])
+            logger.info(
+                f'Game #{game.id}: Takeback para move {existing_move.move_number} '
+                f'({deleted} moves apagados)'
+            )
+            return self.game_id
+
+        # Verificar se é o FEN inicial (posição padrão) e ainda não há moves
+        starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+        if fen == starting_fen and not Move.objects.filter(game=game).exists():
+            game.fen_string = fen
+            game.save(update_fields=['fen_string', 'updated_at'])
+            return self.game_id
+
+        # 3. Novo move — calcular número seguinte
+        last_move_num = (
+            Move.objects
+            .filter(game=game)
+            .order_by('-move_number')
+            .values_list('move_number', flat=True)
+            .first()
+        ) or 0
+
+        Move.objects.create(
+            game=game,
+            move_number=last_move_num + 1,
+            move_san=f'move{last_move_num + 1}',  # Placeholder (sem SAN real)
+            fen_after=fen,
+        )
+
+        game.fen_string = fen
+        game.save(update_fields=['fen_string', 'updated_at'])
+
+        logger.debug(f'Game #{game.id}: Move {last_move_num + 1} guardado')
+        return self.game_id
+
     # ---- Handlers para mensagens do channel layer ----
 
     async def fen_update(self, event):
-        """
-        Recebe broadcast do LiveBoardFenView e envia ao browser.
-
-        Formato enviado ao browser:
-            {
-                "type": "detection_result",
-                "board_detected": true,
-                "fen": "<FEN normalizado>",
-                "session_id": "...",
-                "utilizador": "..."
-            }
-        """
+        """Recebe broadcast e envia ao browser."""
         await self.send(text_data=json.dumps({
             'type': 'detection_result',
             'board_detected': event.get('board_detected', True),
             'fen': event.get('fen', ''),
             'session_id': event.get('session_id', ''),
+            'game_id': event.get('game_id'),
             'utilizador': event.get('utilizador', ''),
         }))

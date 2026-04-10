@@ -247,4 +247,39 @@ export const matchmaking = {
   },
 };
 
+export const games = {
+  // Obter todas as partidas do utilizador
+  getMyGames: async (gameType?: string) => {
+    try {
+      const params = gameType ? { game_type: gameType } : {};
+      const response = await api.get('/game/my_games/', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get games:', error);
+      throw error;
+    }
+  },
+
+  // Obter replay de um jogo (lista de FENs)
+  getGameReplay: async (gameId: number) => {
+    try {
+      const response = await api.get(`/game/${gameId}/replay/`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get game replay:', error);
+      throw error;
+    }
+  },
+
+  // Apagar uma partida
+  deleteGame: async (gameId: number) => {
+    try {
+      await api.delete(`/game/${gameId}/`);
+    } catch (error) {
+      console.error('Failed to delete game:', error);
+      throw error;
+    }
+  },
+};
+
 export default api;

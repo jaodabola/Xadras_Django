@@ -61,6 +61,13 @@ const Navbar: React.FC = () => {
               >
                 Jogo Local
               </Link>
+              <Link
+                to="/my-games"
+                className={`nav-link ${location.pathname.startsWith('/my-games') ? 'active' : ''}`}
+                onClick={closeMobile}
+              >
+                Minhas Partidas
+              </Link>
             </div>
           )}
         </div>

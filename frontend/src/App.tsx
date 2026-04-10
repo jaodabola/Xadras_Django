@@ -14,6 +14,8 @@ import TournamentDashboard from './pages/Tournament/TournamentDashboard';
 import TournamentCreator from './pages/Tournament/TournamentCreator';
 import TournamentDetail from './pages/Tournament/TournamentDetail';
 import Profile from './pages/Profile/Profile';
+import MyGames from './pages/MyGames/MyGames';
+import GameReplay from './pages/MyGames/GameReplay';
 import './App.css';
 
 const App: React.FC = () => {
@@ -45,6 +47,8 @@ const App: React.FC = () => {
                     <Route path="/game/:gameId" element={<Game />} />
                     <Route path="/play" element={<Matchmaking />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/my-games" element={<MyGames />} />
+                    <Route path="/my-games/:gameId" element={<GameReplay />} />
 
                     {/* Tournament routes */}
                     <Route path="/tournaments" element={<TournamentDashboard />} />

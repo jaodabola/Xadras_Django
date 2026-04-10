@@ -182,3 +182,51 @@ class GameViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(game)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def my_games(self, request):
+        """List all games for the current user, optionally filtered by game_type."""
+        user = request.user
+        game_type = request.query_params.get('game_type')
+
+        queryset = Game.objects.filter(
+            models.Q(white_player=user) | models.Q(black_player=user)
+        ).order_by('-created_at')
+
+        if game_type:
+            queryset = queryset.filter(game_type=game_type)
+
+        # Adicionar contagem de moves via anotação
+        queryset = queryset.annotate(move_count=models.Count('moves'))
+
+        serializer = self.get_serializer(queryset, many=True)
+        # Injetar move_count no response
+        data = serializer.data
+        for item, game_obj in zip(data, queryset):
+            item['move_count'] = game_obj.move_count
+
+        return Response(data)
+
+    @action(detail=True, methods=['get'])
+    def replay(self, request, pk=None):
+        """Get all FENs of a game for replay."""
+        game = self.get_object()
+
+        moves = Move.objects.filter(game=game).order_by('move_number')
+        starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+
+        fens = [starting_fen]
+        for move in moves:
+            fens.append(move.fen_after)
+
+        return Response({
+            'game_id': game.id,
+            'game_type': game.game_type,
+            'status': game.status,
+            'result': game.result,
+            'created_at': game.created_at,
+            'white_player': game.white_player.username,
+            'black_player': game.black_player.username if game.black_player else None,
+            'fens': fens,
+            'total_moves': moves.count(),
+        })

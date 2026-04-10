@@ -10,6 +10,7 @@ interface ChessBoardProps {
   onMove: (move: { from: string; to: string; promotion?: string }) => void;
   lastMove: string | null;
   interactive: boolean;
+  bestMove?: string | null;
   width?: number;
 }
 
@@ -22,6 +23,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   onMove,
   lastMove,
   interactive = true,
+  bestMove = null,
 }) => {
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -225,6 +227,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         const isKingInCheck = kingInCheck === squareId;
         const hasPiece = !!square;
 
+        const isBestMoveFrom = bestMove && bestMove.substring(0, 2) === squareId;
+        const isBestMoveTo = bestMove && bestMove.substring(2, 4) === squareId;
+
         const squareClass = [
           'square',
           isWhite ? 'white' : 'black',
@@ -232,7 +237,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           isValidMove ? 'valid-move' : '',
           hasPiece && isValidMove ? 'has-piece' : '',
           isHighlighted ? 'highlight' : '',
-          isKingInCheck ? 'king-in-check' : ''
+          isKingInCheck ? 'king-in-check' : '',
+          (isBestMoveFrom || isBestMoveTo) ? 'best-move-hint' : ''
         ].filter(Boolean).join(' ');
 
         const pieceClass = [
@@ -276,7 +282,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         );
       })
     );
-  }, [game, orientation, selectedSquare, validMoves, highlightedSquares, kingInCheck, interactive]);
+  }, [game, orientation, selectedSquare, validMoves, highlightedSquares, kingInCheck, interactive, bestMove, promotionMove]);
 
   return (
     <div className="chess-board" style={{ position: 'relative' }}>

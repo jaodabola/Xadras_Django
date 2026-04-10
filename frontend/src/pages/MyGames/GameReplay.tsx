@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import ChessBoard from '../../components/ChessBoard/ChessBoard';
 import { games } from '../../services/api';
 import './GameReplay.css';
+import EvaluationBar from '../../components/EvaluationBar/EvaluationBar';
+import { useStockfish } from '../../hooks/useStockfish';
 
 interface ReplayData {
   game_id: number;
@@ -23,6 +25,10 @@ const GameReplay: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Stockfish Engine
+  const [engineEnabled, setEngineEnabled] = useState(false);
+  const { evaluation, isEngineReady, analyzeFen, stopAnalysis } = useStockfish();
 
   useEffect(() => {
     if (!gameId) return;
@@ -78,6 +84,15 @@ const GameReplay: React.FC = () => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [data]);
+
+  // Handle Engine triggering
+  useEffect(() => {
+    if (engineEnabled && data && data.fens[currentMove]) {
+      analyzeFen(data.fens[currentMove]); // Análise infinita (até parar)
+    } else {
+      stopAnalysis();
+    }
+  }, [engineEnabled, data, currentMove, analyzeFen, stopAnalysis]);
 
   const getResultLabel = () => {
     if (!data) return '';
@@ -144,15 +159,19 @@ const GameReplay: React.FC = () => {
 
       {/* Main content */}
       <div className="replay-content">
-        {/* Board */}
-        <div className="replay-board-wrapper">
-          <ChessBoard
-            position={data.fens[currentMove]}
-            orientation="white"
-            onMove={() => {}}
-            lastMove={null}
-            interactive={false}
-          />
+        {/* Board and Evaluation */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+          {engineEnabled && <EvaluationBar evaluation={evaluation} />}
+          <div className="replay-board-wrapper" style={{ flexGrow: 1, minWidth: 0, margin: 0 }}>
+            <ChessBoard
+              position={data.fens[currentMove]}
+              orientation="white"
+              onMove={() => {}}
+              lastMove={null}
+              interactive={false}
+              bestMove={engineEnabled ? evaluation?.bestMove : null}
+            />
+          </div>
         </div>
 
         {/* Controls + Move list */}
@@ -198,11 +217,25 @@ const GameReplay: React.FC = () => {
             >
               ⏭
             </button>
+
+            <div style={{ width: '1px', alignSelf: 'stretch', backgroundColor: 'var(--border-color, #ccc)', margin: '0 4px' }}></div>
+            
+            <button
+               className={`control-btn ${engineEnabled ? 'playing' : ''}`}
+               onClick={() => setEngineEnabled(prev => !prev)}
+               disabled={!isEngineReady}
+               title="Ligar Análise do Motor"
+               style={{ width: 'auto', padding: '0 12px', fontSize: '0.85rem', fontWeight: 'bold' }}
+            >
+               {engineEnabled ? `🧠 ON (D${evaluation?.depth || 0})` : '💤 MOTOR'}
+            </button>
           </div>
 
-          {/* Move counter */}
-          <div className="replay-move-counter">
-            Jogada {currentMove} / {data.fens.length - 1}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0.5rem 0' }}>
+            {/* Move counter */}
+            <div className="replay-move-counter" style={{ margin: 0 }}>
+              Jogada {currentMove} / {data.fens.length - 1}
+            </div>
           </div>
 
           {/* Move list */}

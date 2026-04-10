@@ -1,13 +1,15 @@
 """
 Vista REST para receber FEN de uma app externa (telemóvel).
 
-Endpoint leve que valida o FEN com python-chess e faz broadcast
-via channel layer para o browser que esteja a escutar na sessão.
+Endpoint leve que retransmite o FEN via channel layer para o
+browser que esteja a escutar na sessão.
+
+A validação do FEN é feita no Android (chesslib) — aqui apenas
+verificamos campos obrigatórios e retransmitimos sem delay.
 """
 
 import logging
 
-import chess
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from rest_framework.views import APIView
@@ -21,12 +23,12 @@ class LiveBoardFenView(APIView):
     """
     POST /api/game/live-board/fen/
 
-    Recebe um FEN enviado por uma app externa (ex.: telemóvel),
-    valida-o e retransmite para o browser ligado à mesma sessão.
+    Recebe um FEN já validado pelo Android e retransmite
+    imediatamente para o browser ligado à mesma sessão.
 
     Body esperado:
         {
-            "fen": "<string FEN válido>",
+            "fen": "<string FEN>",
             "session_id": "<identificador da sessão>"
         }
     """
@@ -50,16 +52,7 @@ class LiveBoardFenView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # --- Validação do FEN com python-chess ---
-        try:
-            board = chess.Board(fen)
-        except ValueError:
-            return Response(
-                {'erro': 'FEN inválido.', 'fen_recebido': fen},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # --- Broadcast via channel layer para o browser ---
+        # --- Broadcast direto via channel layer (sem re-validação) ---
         channel_layer = get_channel_layer()
         grupo = f'live_board_{session_id}'
 
@@ -68,7 +61,7 @@ class LiveBoardFenView(APIView):
                 grupo,
                 {
                     'type': 'fen_update',
-                    'fen': board.fen(),        # FEN normalizado
+                    'fen': fen,
                     'board_detected': True,
                     'session_id': session_id,
                     'utilizador': request.user.username,
@@ -82,14 +75,14 @@ class LiveBoardFenView(APIView):
             )
 
         logger.info(
-            f'FEN recebido de {request.user.username} '
-            f'para sessão {session_id}: {board.fen()}'
+            f'FEN relay: {request.user.username} '
+            f'→ sessão {session_id}: {fen}'
         )
 
         return Response(
             {
-                'mensagem': 'FEN recebido e retransmitido com sucesso.',
-                'fen': board.fen(),
+                'mensagem': 'FEN retransmitido com sucesso.',
+                'fen': fen,
                 'session_id': session_id,
             },
             status=status.HTTP_200_OK,

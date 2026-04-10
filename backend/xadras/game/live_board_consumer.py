@@ -75,10 +75,11 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         """
-        Processar mensagens recebidas do browser.
+        Processar mensagens recebidas via WebSocket.
 
-        Nesta versão simplificada apenas suportamos 'ping'.
-        Frames de vídeo já não são processados no servidor.
+        Suporta:
+        - 'ping': keep-alive
+        - 'fen_update': FEN enviado pelo telemóvel → broadcast para o grupo
         """
         try:
             data = json.loads(text_data)
@@ -86,6 +87,25 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
 
             if msg_type == 'ping':
                 await self.send(text_data=json.dumps({'type': 'pong'}))
+
+            elif msg_type == 'fen_update':
+                # Relay direto — o FEN já foi validado no Android (chesslib)
+                fen = data.get('fen', '')
+                session_id = data.get('session_id', self.session_id)
+
+                if fen:
+                    await self.channel_layer.group_send(
+                        self.group_name,
+                        {
+                            'type': 'fen_update',
+                            'fen': fen,
+                            'board_detected': True,
+                            'session_id': session_id,
+                            'utilizador': '',
+                        },
+                    )
+                    logger.debug(f'FEN relay via WS: {fen[:30]}...')
+
             else:
                 logger.debug(f'Tipo de mensagem ignorado: {msg_type}')
 

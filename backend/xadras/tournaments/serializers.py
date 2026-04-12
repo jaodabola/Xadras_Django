@@ -1,5 +1,5 @@
-# XADRAS - Tournament Serializers
-# Implementation for Tournament API endpoints
+# XADRAS - Serializers de Torneio
+# Implementação para os endpoints da API de Torneio
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
@@ -9,7 +9,7 @@ User = get_user_model()
 
 
 class TournamentSerializer(serializers.ModelSerializer):
-    """Serializer for Tournament model"""
+    """Serializer para o modelo Tournament"""
 
     participant_count = serializers.ReadOnlyField()
     is_full = serializers.ReadOnlyField()
@@ -40,13 +40,13 @@ class TournamentSerializer(serializers.ModelSerializer):
         return []
 
     def create(self, validated_data):
-        """Create tournament with current user as organizer"""
+        """Criar torneio com o utilizador atual como organizador"""
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
 
 
 class TournamentParticipantSerializer(serializers.ModelSerializer):
-    """Serializer for Tournament Participant"""
+    """Serializer para Participante de Torneio"""
 
     username = serializers.CharField(source='user.username', read_only=True)
     user_rating = serializers.IntegerField(
@@ -63,7 +63,7 @@ class TournamentParticipantSerializer(serializers.ModelSerializer):
 
 
 class TournamentRoundSerializer(serializers.ModelSerializer):
-    """Serializer for Tournament Round"""
+    """Serializer para Ronda de Torneio"""
 
     pairing_count = serializers.ReadOnlyField()
     completed_games = serializers.ReadOnlyField()
@@ -81,7 +81,7 @@ class TournamentRoundSerializer(serializers.ModelSerializer):
 
 
 class TournamentPairingSerializer(serializers.ModelSerializer):
-    """Serializer for Tournament Pairing"""
+    """Serializer para Emparelhamento de Torneio"""
 
     white_player_username = serializers.CharField(
         source='white_player.username', read_only=True)
@@ -109,7 +109,7 @@ class TournamentPairingSerializer(serializers.ModelSerializer):
 
 
 class TournamentStandingsSerializer(serializers.Serializer):
-    """Serializer for tournament standings"""
+    """Serializer para a classificação do torneio"""
 
     position = serializers.IntegerField()
     participant_id = serializers.UUIDField()
@@ -128,7 +128,7 @@ class TournamentStandingsSerializer(serializers.Serializer):
 
 
 class TournamentCreateSerializer(serializers.ModelSerializer):
-    """Simplified serializer for tournament creation"""
+    """Serializer simplificado para a criação de torneios"""
 
     class Meta:
         model = Tournament
@@ -138,28 +138,28 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        """Create tournament with current user as organizer"""
+        """Criar torneio com o utilizador atual como organizador"""
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
 
 
 class TournamentJoinSerializer(serializers.Serializer):
-    """Serializer for joining tournament via join code"""
+    """Serializer para aderir ao torneio via código de adesão"""
 
     join_code = serializers.CharField(max_length=20)
 
     def validate_join_code(self, value):
-        """Validate that join code exists and tournament is joinable"""
+        """Validar que o código de adesão existe e o torneio permite inscrições"""
         try:
             tournament = Tournament.objects.get(join_code=value.upper())
         except Tournament.DoesNotExist:
-            raise serializers.ValidationError("Invalid join code")
+            raise serializers.ValidationError("Código de adesão inválido")
 
         if tournament.status != Tournament.REGISTRATION:
             raise serializers.ValidationError(
-                "Tournament registration is closed")
+                "As inscrições no torneio estão fechadas")
 
         if tournament.is_full:
-            raise serializers.ValidationError("Tournament is full")
+            raise serializers.ValidationError("O torneio está cheio")
 
         return value

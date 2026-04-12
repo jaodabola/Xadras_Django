@@ -6,18 +6,18 @@ User = get_user_model()
 
 
 class Game(models.Model):
-    """Model to represent a chess game"""
-    # Status constants
+    """Modelo para representar um jogo de xadrez"""
+    # Constantes de estado
     PENDING = 'PENDING'
     IN_PROGRESS = 'IN_PROGRESS'
     FINISHED = 'FINISHED'
 
-    # Result constants
+    # Constantes de resultado
     WHITE_WIN = 'WHITE_WIN'
     BLACK_WIN = 'BLACK_WIN'
     DRAW = 'DRAW'
 
-    # Game type constants
+    # Constantes de tipo de jogo
     ONLINE = 'ONLINE'
     LIVE_CAPTURE = 'LIVE_CAPTURE'
 
@@ -74,7 +74,7 @@ class Game(models.Model):
 
 
 class Move(models.Model):
-    """Model to represent a chess move"""
+    """Modelo para representar uma jogada de xadrez"""
     game = models.ForeignKey(Game, related_name='moves',
                              on_delete=models.CASCADE)
     move_number = models.IntegerField()
@@ -87,14 +87,14 @@ class Move(models.Model):
         verbose_name = 'Move'
         verbose_name_plural = 'Moves'
         indexes = [
-            # Fast game move retrieval
+            # Recuperação rápida de jogadas do jogo
             models.Index(fields=['game', 'move_number']),
-            # Chronological queries
+            # Consultas cronológicas
             models.Index(fields=['game', 'created_at']),
-            # Recent moves across all games
+            # Jogadas recentes em todos os jogos
             models.Index(fields=['created_at']),
         ]
-        # Prevent duplicate move numbers
+        # Prevenir números de jogada duplicados
         unique_together = ['game', 'move_number']
 
     def __str__(self):

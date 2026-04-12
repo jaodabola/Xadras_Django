@@ -1,9 +1,9 @@
 """
-ASGI config for xadras project.
+Configuração ASGI para o projeto xadras.
 
-It exposes the ASGI callable as a module-level variable named ``application``.
+Expõe o chamável ASGI como uma variável de nível de módulo chamada ``application``.
 
-For more information on this file, see
+Para mais informações sobre este ficheiro, consulte
 https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 """
 
@@ -15,8 +15,8 @@ from game.middleware import TokenAuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'xadras.settings')
 
-# Initialize Django ASGI application early to ensure the AppRegistry
-# is populated before importing code that may import ORM models.
+# Inicializar a aplicação ASGI do Django cedo para garantir que o AppRegistry
+# seja preenchido antes de importar código que possa importar modelos ORM.
 django_asgi_app = get_asgi_application()
 
 from game import routing as game_routing

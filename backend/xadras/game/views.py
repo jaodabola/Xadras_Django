@@ -23,11 +23,11 @@ class GameViewSet(viewsets.ModelViewSet):
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
     def create(self, request, *args, **kwargs):
-        """Create a new game"""
+        """Cria um novo jogo"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Create game with current user as white player
+        # Cria o jogo com o utilizador atual como jogador das brancas
         game = Game.objects.create(
             white_player=request.user,
             status='PENDING'
@@ -38,7 +38,7 @@ class GameViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
-        """Join an existing game as black player"""
+        """Entrar num jogo existente como jogador das pretas"""
         game = self.get_object()
         if game.black_player or game.status != 'PENDING':
             return Response({'error': 'Game is not available'}, status=status.HTTP_400_BAD_REQUEST)
@@ -53,7 +53,7 @@ class GameViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     @method_decorator(ratelimit(key='user', rate='60/m', method='POST', block=False))
     def move(self, request, pk=None):
-        """Make a move in the game with improved validation and atomic operations"""
+        """Realiza uma jogada no jogo com validação melhorada e operações atómicas"""
         from django.db import transaction
         import chess
         import logging
@@ -62,24 +62,24 @@ class GameViewSet(viewsets.ModelViewSet):
 
         game = self.get_object()
 
-        # Validate game status
+        # Validar o estado do jogo
         if game.status != 'IN_PROGRESS':
             return Response({'error': 'Game is not in progress'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate required move data
+        # Validar dados de jogada obrigatórios
         move_san = request.data.get('move_san')
         fen_after = request.data.get('fen_after')
 
         if not move_san or not fen_after:
             return Response({'error': 'Missing move data (move_san and fen_after required)'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Use atomic transaction to prevent race conditions
+        # Usar transação atómica para prevenir condições de corrida
         try:
             with transaction.atomic():
-                # Get locked game row to prevent race conditions
+                # Obter linha do jogo bloqueada para prevenir condições de corrida
                 game_locked = Game.objects.select_for_update().get(id=game.id)
 
-                # Determine whose turn it is from the current game FEN string
+                # Determinar de quem é o turno a partir da string FEN atual do jogo
                 try:
                     board_before = chess.Board(game_locked.fen_string)
                 except ValueError:
@@ -87,23 +87,23 @@ class GameViewSet(viewsets.ModelViewSet):
 
                 is_white_turn = board_before.turn == chess.WHITE
 
-                # Current move count is still used only for numbering
+                # A contagem atual de jogadas ainda é usada apenas para numeração
                 current_move_count = Move.objects.filter(
                     game=game_locked).count()
 
-                # Validate turn ownership
+                # Validar a posse do turno
                 if is_white_turn and game_locked.white_player != request.user:
                     return Response({'error': 'Not your turn - it is white\'s turn'}, status=status.HTTP_400_BAD_REQUEST)
                 elif not is_white_turn and game_locked.black_player != request.user:
                     return Response({'error': 'Not your turn - it is black\'s turn'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Validate FEN string format
+                # Validar o formato da string FEN
                 try:
                     chess_board = chess.Board(fen_after)
                 except ValueError:
                     return Response({'error': 'Invalid FEN string format'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Create move with reliable move numbering
+                # Criar jogada com numeração de jogada fiável
                 move_number = current_move_count + 1
                 move = Move.objects.create(
                     game=game_locked,
@@ -112,17 +112,17 @@ class GameViewSet(viewsets.ModelViewSet):
                     fen_after=fen_after
                 )
 
-                # Update game FEN to match the latest move
+                # Atualizar o FEN do jogo para corresponder à última jogada
                 game_locked.fen_string = fen_after
                 game_locked.save()
 
-                # Check for game end conditions
+                # Verificar condições de fim de jogo
                 if chess_board.is_checkmate():
                     game_locked.status = 'FINISHED'
-                    # Black won (white is in checkmate)
+                    # Pretas venceram (brancas estão em xeque-mate)
                     if chess_board.turn == chess.WHITE:
                         game_locked.result = 'BLACK_WIN'
-                    else:  # White won (black is in checkmate)
+                    else:  # Brancas venceram (pretas estão em xeque-mate)
                         game_locked.result = 'WHITE_WIN'
                     game_locked.save()
                 elif chess_board.is_stalemate() or chess_board.is_insufficient_material():
@@ -138,7 +138,7 @@ class GameViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def end(self, request, pk=None):
-        """End the game with a result"""
+        """Terminar o jogo com um resultado"""
         game = self.get_object()
 
         if game.status != 'IN_PROGRESS':
@@ -148,12 +148,12 @@ class GameViewSet(viewsets.ModelViewSet):
         if result not in ['WHITE_WIN', 'BLACK_WIN', 'DRAW']:
             return Response({'error': 'Invalid result'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update game result and status
+        # Atualizar resultado e estado do jogo
         game.result = result
         game.status = 'FINISHED'
         game.save()
 
-        # Update player statistics
+        # Atualizar estatísticas dos jogadores
         if result == 'WHITE_WIN':
             game.white_player.update_statistics('win')
             game.black_player.update_statistics('loss')
@@ -164,7 +164,7 @@ class GameViewSet(viewsets.ModelViewSet):
             game.white_player.update_statistics('draw')
             game.black_player.update_statistics('draw')
 
-        # Calculate new ELO ratings
+        # Calcular novos ratings ELO
         white_win_status = 'win' if result == 'WHITE_WIN' else 'loss' if result == 'BLACK_WIN' else 'draw'
         black_win_status = 'win' if result == 'BLACK_WIN' else 'loss' if result == 'WHITE_WIN' else 'draw'
 
@@ -176,7 +176,7 @@ class GameViewSet(viewsets.ModelViewSet):
         game.white_player.elo_rating = new_white_elo
         game.black_player.elo_rating = new_black_elo
 
-        # Save updated statistics
+        # Guardar estatísticas atualizadas
         game.white_player.save()
         game.black_player.save()
 
@@ -185,7 +185,7 @@ class GameViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def my_games(self, request):
-        """List all games for the current user, optionally filtered by game_type."""
+        """Listar todos os jogos do utilizador atual, opcionalmente filtrados por game_type."""
         user = request.user
         game_type = request.query_params.get('game_type')
 
@@ -200,16 +200,11 @@ class GameViewSet(viewsets.ModelViewSet):
         queryset = queryset.annotate(move_count=models.Count('moves'))
 
         serializer = self.get_serializer(queryset, many=True)
-        # Injetar move_count no response
-        data = serializer.data
-        for item, game_obj in zip(data, queryset):
-            item['move_count'] = game_obj.move_count
-
-        return Response(data)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def replay(self, request, pk=None):
-        """Get all FENs of a game for replay."""
+        """Obter todos os FENs de um jogo para replay."""
         game = self.get_object()
 
         moves = Move.objects.filter(game=game).order_by('move_number')

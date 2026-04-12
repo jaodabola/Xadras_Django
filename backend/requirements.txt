@@ -4,7 +4,6 @@ python-dotenv
 
 # API
 djangorestframework
-djangorestframework-simplejwt
 djoser
 
 # Real-time
@@ -28,21 +27,14 @@ django-redis
 Pillow  # Para processamento de imagens (se necessário)
 whitenoise  # Para servir ficheiros estáticos em produção
 
-# Deteção de tabuleiro (visão computacional)
-opencv-python
-numpy
-ultralytics  # YOLO para deteção do tabuleiro
-gunicorn  # Servidor WSGI para produção
 
 # Security
-python-jose  # Para JWT
-cryptography
 django-ratelimit  # Rate limiting para APIs
 
 # CORS
 django-cors-headers
 
 # Email
-sendgrid  # Para envio de emails (opcional)
+sendgrid  # Para envio de emails (desativado)
 
 python-json-logger

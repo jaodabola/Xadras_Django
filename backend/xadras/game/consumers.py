@@ -15,26 +15,26 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.game_group_name = f'game_{self.game_id}'
 
-        # Get user and IP for rate limiting
+        # Obter o utilizador e o IP para limitação de taxa (rate limiting)
         user = self.scope.get('user')
         ip_address = self.scope.get('client', ['unknown', None])[0]
 
-        # Check WebSocket connection limits
+        # Verificar os limites de ligação WebSocket
         allowed, message = WebSocketRateLimitMiddleware.check_connection_limit(
             user, ip_address)
         if not allowed:
             logger.warning(
                 f"WebSocket connection denied: {message} for user {user} from {ip_address}")
-            await self.close(code=4429)  # Custom close code for rate limit
+            await self.close(code=4429)  # Código de fecho personalizado para limite de taxa
             return
 
-        # Increment connection count
+        # Incrementar a contagem de ligações
         WebSocketRateLimitMiddleware.increment_connection_count(
             user, ip_address)
         self.user = user
         self.ip_address = ip_address
 
-        # Join game group
+        # Juntar ao grupo do jogo
         await self.channel_layer.group_add(
             self.game_group_name,
             self.channel_name
@@ -45,20 +45,20 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Decrement connection count
+        # Decrementar a contagem de ligações
         if hasattr(self, 'user') and hasattr(self, 'ip_address'):
             WebSocketRateLimitMiddleware.decrement_connection_count(
                 self.user, self.ip_address)
             logger.info(
                 f"WebSocket disconnected: user {self.user} from {self.ip_address}")
 
-        # Leave game group
+        # Sair do grupo do jogo
         await self.channel_layer.group_discard(
             self.game_group_name,
             self.channel_name
         )
 
-    # Receive message from WebSocket
+    # Receber mensagem do WebSocket
     async def receive(self, text_data):
         data = json.loads(text_data)
 
@@ -73,9 +73,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def handle_move(self, data):
         try:
-            # Broadcast move to all clients in the game group without modifying the database.
-            # The REST /game/{id}/move/ endpoint remains the single source of truth for
-            # persisting moves and updating FEN/turn state.
+            # Transmitir a jogada para todos os clientes no grupo do jogo sem modificar a base de dados.
+            # O endpoint REST /game/{id}/move/ continua a ser a única fonte de verdade para
+            # persistir jogadas e atualizar o estado do FEN/vez de jogar.
             await self.channel_layer.group_send(
                 self.game_group_name,
                 {
@@ -104,11 +104,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def handle_board_update(self, data):
         """
-        Handle board_update message from Vision AI
-        Format: { "type":"board_update", "uci_list":["e2e4"], "fen":"...", "confidence":0.9 }
+        Lidar com a mensagem board_update da IA de Visão
+        Formato: { "type":"board_update", "uci_list":["e2e4"], "fen":"...", "confidence":0.9 }
         """
         try:
-            # Validate required fields
+            # Validar campos obrigatórios
             required_fields = ['uci_list', 'fen', 'confidence']
             for field in required_fields:
                 if field not in data:
@@ -124,7 +124,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             fen = data['fen']
             confidence = data['confidence']
 
-            # Validate confidence threshold (configurable)
+            # Validar o limite de confiança (configurável)
             MIN_CONFIDENCE = 0.7
             if confidence < MIN_CONFIDENCE:
                 logger.warning(
@@ -137,17 +137,17 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }))
                 return
 
-            # Get game and validate
+            # Obter o jogo e validar
             game = await Game.objects.aget(id=self.game_id)
             if game.status != 'IN_PROGRESS':
                 logger.warning(
                     f"Board update for non-active game: {self.game_id}")
                 return
 
-            # Process UCI moves (Vision AI detected moves)
+            # Processar jogadas UCI (jogadas detetadas pela IA de Visão)
             if uci_list:
-                # For now, we'll broadcast the board update to all clients
-                # The frontend can decide how to handle it (show suggestions, auto-move, etc.)
+                # Por agora, vamos transmitir a atualização do tabuleiro para todos os clientes
+                # O frontend pode decidir como lidar com isso (mostrar sugestões, auto-jogada, etc.)
                 await self.channel_layer.group_send(
                     self.game_group_name,
                     {
@@ -163,7 +163,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 logger.info(
                     f"Board update processed for game {self.game_id}: {uci_list} (confidence: {confidence})")
 
-            # Optionally, auto-validate moves if confidence is very high
+            # Opcionalmente, validar automaticamente as jogadas se a confiança for muito alta
             AUTO_MOVE_CONFIDENCE = 0.95
             if confidence >= AUTO_MOVE_CONFIDENCE and len(uci_list) == 1:
                 # High confidence single move - could auto-apply
@@ -179,7 +179,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'message': f'Board update processing failed: {str(e)}'
             }))
 
-    # Receive move from game group
+    # Receber jogada do grupo do jogo
     async def game_move(self, event):
         move = event['move']
         await self.send(text_data=json.dumps({
@@ -187,7 +187,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'move': move
         }))
 
-    # Receive chat message from game group
+    # Receber mensagem de chat do grupo do jogo
     async def chat_message(self, event):
         message = event['message']
         user = event['user']
@@ -197,9 +197,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             'user': user
         }))
 
-    # Receive board update from Vision AI
+    # Receber atualização do tabuleiro da IA de Visão
     async def board_update_message(self, event):
-        """Send board update to connected clients"""
+        """Enviar atualização do tabuleiro para os clientes ligados"""
         await self.send(text_data=json.dumps({
             'type': 'board_update',
             'uci_list': event['uci_list'],

@@ -1,5 +1,5 @@
-# XADRAS - Tournament Views
-# Implementation of Tournament API endpoints
+# XADRAS - Vistas de Torneio
+# Implementação dos endpoints da API de Torneio
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
@@ -26,28 +26,28 @@ logger = logging.getLogger(__name__)
 
 class TournamentViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Tournament management
-    Supports CRUD operations and tournament-specific actions
+    ViewSet para gestão de Torneios
+    Suporta operações CRUD e ações específicas de torneio
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Filter tournaments based on user permissions"""
+        """Filtrar torneios com base nas permissões do utilizador"""
         user = self.request.user
 
-        # Organizers can see all their tournaments
-        # Participants can see tournaments they're in
-        # Everyone can see public tournaments
+        # Organizadores podem ver todos os seus torneios
+        # Participantes podem ver torneios em que participam
+        # Todos podem ver torneios públicos
 
         if self.action == 'list':
-            # For list view, show public tournaments and user's tournaments
+            # Para a vista de lista, mostrar torneios públicos e os do utilizador
             return Tournament.objects.filter(
                 models.Q(is_public=True) |
                 models.Q(created_by=user) |
                 models.Q(participants__user=user)
             ).distinct().order_by('-created_at')
         else:
-            # For detail views, allow access to tournaments user is involved in
+            # Para vistas de detalhe, permitir acesso aos torneios em que o utilizador está envolvido
             return Tournament.objects.filter(
                 models.Q(created_by=user) |
                 models.Q(participants__user=user) |
@@ -55,14 +55,14 @@ class TournamentViewSet(viewsets.ModelViewSet):
             ).distinct()
 
     def get_serializer_class(self):
-        """Return appropriate serializer based on action"""
+        """Retornar o serializer apropriado com base na ação"""
         if self.action == 'create':
             return TournamentCreateSerializer
         return TournamentSerializer
 
     @method_decorator(ratelimit(key='user', rate='5/m', method='POST', block=True))
     def create(self, request, *args, **kwargs):
-        """Create a new tournament"""
+        """Criar um novo torneio"""
         if getattr(request.user, 'is_guest', False):
             return Response(
                 {'error': 'Os convidados não podem criar torneios. Registe-se para criar um torneio.'},
@@ -74,15 +74,15 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
         tournament = serializer.save()
 
-        # Automatically add creator as participant
+        # Adicionar automaticamente o criador como participante
         TournamentParticipant.objects.create(
             tournament=tournament,
             user=request.user,
-            seed=1  # Tournament creator gets seed 1
+            seed=1  # O criador do torneio recebe a semente 1
         )
 
         logger.info(
-            f"Tournament created: {tournament.name} by {request.user.username}")
+            f"Torneio criado: {tournament.name} por {request.user.username}")
 
         response_serializer = TournamentSerializer(
             tournament, context={'request': request})
@@ -91,7 +91,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     @method_decorator(ratelimit(key='user', rate='5/m', method='POST', block=True))
     def join(self, request, pk=None):
-        """Join tournament using join code or direct tournament ID"""
+        """Participar num torneio usando o código de adesão ou ID direto do torneio"""
         if getattr(request.user, 'is_guest', False):
             return Response(
                 {'error': 'Os convidados não podem participar em torneios. Registe-se para jogar.'},
@@ -100,49 +100,49 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
         tournament = self.get_object()
 
-        # Check if tournament is joinable
+        # Verificar se o torneio aceita inscrições
         if tournament.status != Tournament.REGISTRATION:
             return Response(
-                {'error': 'Tournament registration is closed'},
+                {'error': 'As inscrições no torneio estão fechadas'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if tournament.is_full:
             return Response(
-                {'error': 'Tournament is full'},
+                {'error': 'O torneio está cheio'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check if user is already a participant
+        # Verificar se o utilizador já é um participante
         if TournamentParticipant.objects.filter(
             tournament=tournament,
             user=request.user
         ).exists():
             return Response(
-                {'error': 'You are already registered for this tournament'},
+                {'error': 'Já está registado neste torneio'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Add user as participant
+        # Adicionar utilizador como participante
         participant = TournamentParticipant.objects.create(
             tournament=tournament,
             user=request.user
         )
 
         logger.info(
-            f"User {request.user.username} joined tournament {tournament.name}")
+            f"Utilizador {request.user.username} aderiu ao torneio {tournament.name}")
 
         serializer = TournamentParticipantSerializer(participant)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def leave(self, request, pk=None):
-        """Leave tournament (only during registration)"""
+        """Sair do torneio (apenas durante a inscrição)"""
         tournament = self.get_object()
 
         if tournament.status != Tournament.REGISTRATION:
             return Response(
-                {'error': 'Cannot leave tournament after registration closes'},
+                {'error': 'Não é possível sair do torneio após o fecho das inscrições'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -152,78 +152,71 @@ class TournamentViewSet(viewsets.ModelViewSet):
                 user=request.user
             )
 
-            # Tournament creator cannot leave their own tournament
+            # O criador do torneio não pode sair do seu próprio torneio
             if tournament.created_by == request.user:
                 return Response(
-                    {'error': 'Tournament organizer cannot leave their own tournament'},
+                    {'error': 'O organizador do torneio não pode sair do seu próprio torneio'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             participant.delete()
             logger.info(
-                f"User {request.user.username} left tournament {tournament.name}")
+                f"Utilizador {request.user.username} saiu do torneio {tournament.name}")
 
             return Response(
-                {'message': 'Successfully left tournament'},
+                {'message': 'Saiu do torneio com sucesso'},
                 status=status.HTTP_200_OK
             )
 
         except TournamentParticipant.DoesNotExist:
             return Response(
-                {'error': 'You are not registered for this tournament'},
+                {'error': 'Não está registado neste torneio'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
-        """Start tournament (organizer only)"""
+        """Iniciar torneio (apenas organizador)"""
         tournament = self.get_object()
 
-        # Check permissions
+        # Verificar permissões
         if tournament.created_by != request.user:
             return Response(
-                {'error': 'Only tournament organizer can start tournament'},
+                {'error': 'Apenas o organizador do torneio pode iniciar o torneio'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         if not tournament.can_start:
             return Response(
-                {'error': 'Tournament cannot be started (check participant count and registration deadline)'},
+                {'error': 'O torneio não pode ser iniciado (verifique o número de participantes e o prazo de inscrição)'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        with transaction.atomic():
-            # Update tournament status
-            tournament.status = Tournament.IN_PROGRESS
-            tournament.start_date = timezone.now()
-
-            # Calculate total rounds for Swiss system
-            if tournament.tournament_type == Tournament.SWISS:
-                participant_count = tournament.participant_count
-                if participant_count >= 2:
-                    import math
-                    tournament.total_rounds = math.ceil(
-                        math.log2(participant_count))
-
-            tournament.save()
-
-            # Assign seeds based on rating
-            participants = tournament.participants.filter(
-                is_active=True).order_by('-initial_rating')
-            for i, participant in enumerate(participants, 1):
-                participant.seed = i
-                participant.save()
-
+        try:
+            manager = TournamentManager(tournament)
+            result = manager.start_tournament(request.user)
+            
             logger.info(
-                f"Tournament started: {tournament.name} with {tournament.participant_count} participants")
+                f"Torneio iniciado: {tournament.name} com {tournament.participant_count} participantes")
+                
+            return Response(result)
 
-        serializer = TournamentSerializer(
-            tournament, context={'request': request})
-        return Response(serializer.data)
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(
+                f"Erro ao iniciar o torneio {tournament.id}: {str(e)}")
+            return Response(
+                {'error': 'Falha ao iniciar o torneio'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'])
     def participants(self, request, pk=None):
-        """Get tournament participants"""
+        """Obter participantes do torneio"""
         tournament = self.get_object()
         participants = tournament.participants.filter(
             is_active=True).order_by('seed')
@@ -233,7 +226,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def standings(self, request, pk=None):
-        """Get current tournament standings with complete tiebreaker system"""
+        """Obter a classificação atual do torneio com o sistema completo de desempates"""
         tournament = self.get_object()
 
         try:
@@ -243,15 +236,15 @@ class TournamentViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Exception as e:
             logger.error(
-                f"Error calculating standings for tournament {tournament.id}: {str(e)}")
+                f"Erro ao calcular a classificação para o torneio {tournament.id}: {str(e)}")
             return Response(
-                {'error': 'Failed to calculate standings'},
+                {'error': 'Falha ao calcular a classificação'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=True, methods=['get'])
     def rounds(self, request, pk=None):
-        """Get tournament rounds"""
+        """Obter as rondas do torneio"""
         tournament = self.get_object()
         rounds = tournament.rounds.all().order_by('round_number')
 
@@ -260,21 +253,21 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='rounds/(?P<round_number>[^/.]+)')
     def round_detail(self, request, pk=None, round_number=None):
-        """Get specific round with pairings"""
+        """Obter uma ronda específica com emparelhamentos"""
         tournament = self.get_object()
 
         try:
             round_obj = tournament.rounds.get(round_number=round_number)
         except TournamentRound.DoesNotExist:
             return Response(
-                {'error': 'Round not found'},
+                {'error': 'Ronda não encontrada'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Get round data
+        # Obter dados da ronda
         round_serializer = TournamentRoundSerializer(round_obj)
 
-        # Get pairings for this round
+        # Obter emparelhamentos para esta ronda
         pairings = round_obj.pairings.all().order_by('board_number')
         pairing_serializer = TournamentPairingSerializer(pairings, many=True)
 
@@ -285,19 +278,19 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def generate_pairings(self, request, pk=None):
-        """Generate pairings for next round (organizer only)"""
+        """Gerar emparelhamentos para a próxima ronda (apenas organizador)"""
         tournament = self.get_object()
 
-        # Check permissions
+        # Verificar permissões
         if tournament.created_by != request.user:
             return Response(
-                {'error': 'Only tournament organizer can generate pairings'},
+                {'error': 'Apenas o organizador do torneio pode gerar emparelhamentos'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         if tournament.status != Tournament.IN_PROGRESS:
             return Response(
-                {'error': 'Tournament is not in progress'},
+                {'error': 'O torneio não está em curso'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -305,9 +298,9 @@ class TournamentViewSet(viewsets.ModelViewSet):
             manager = TournamentManager(tournament)
             result = manager.generate_next_round()
 
-            # Convert pairings to use to_dict() method for consistent API response
+            # Converter emparelhamentos para usar o método to_dict() para uma resposta consistente da API
             if 'pairings' in result:
-                # Get actual TournamentPairing objects and serialize them
+                # Obter os objetos TournamentPairing reais e serializá-los
                 round_number = result['round_number']
                 tournament_round = TournamentRound.objects.get(
                     tournament=tournament,
@@ -318,7 +311,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
                                       for pairing in pairings]
 
             logger.info(
-                f"Generated pairings for tournament {tournament.name}, round {result['round_number']}")
+                f"Gerados emparelhamentos para o torneio {tournament.name}, ronda {result['round_number']}")
 
             return Response(result, status=status.HTTP_201_CREATED)
 
@@ -329,28 +322,28 @@ class TournamentViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             logger.error(
-                f"Error generating pairings for tournament {tournament.id}: {str(e)}")
+                f"Erro ao gerar emparelhamentos para o torneio {tournament.id}: {str(e)}")
             return Response(
-                {'error': 'Failed to generate pairings'},
+                {'error': 'Falha ao gerar emparelhamentos'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=True, methods=['post'])
     def start_round(self, request, pk=None):
-        """Start a specific round (organizer only)"""
+        """Iniciar uma ronda específica (apenas organizador)"""
         tournament = self.get_object()
 
-        # Check permissions
+        # Verificar permissões
         if tournament.created_by != request.user:
             return Response(
-                {'error': 'Only tournament organizer can start rounds'},
+                {'error': 'Apenas o organizador do torneio pode iniciar rondas'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         round_number = request.data.get('round_number')
         if not round_number:
             return Response(
-                {'error': 'round_number is required'},
+                {'error': 'round_number é obrigatório'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -359,7 +352,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
             result = manager.start_round(int(round_number))
 
             logger.info(
-                f"Started round {round_number} for tournament {tournament.name}")
+                f"Iniciada a ronda {round_number} para o torneio {tournament.name}")
 
             return Response(result)
 
@@ -370,21 +363,21 @@ class TournamentViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             logger.error(
-                f"Error starting round for tournament {tournament.id}: {str(e)}")
+                f"Erro ao iniciar a ronda para o torneio {tournament.id}: {str(e)}")
             return Response(
-                {'error': 'Failed to start round'},
+                {'error': 'Falha ao iniciar a ronda'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=True, methods=['post'])
     def assign_boards(self, request, pk=None):
-        """Assign physical boards to pairings (organizer only)"""
+        """Atribuir tabuleiros físicos a emparelhamentos (apenas organizador)"""
         tournament = self.get_object()
 
-        # Check permissions
+        # Verificar permissões
         if tournament.created_by != request.user:
             return Response(
-                {'error': 'Only tournament organizer can assign boards'},
+                {'error': 'Apenas o organizador do torneio pode atribuir tabuleiros'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -393,7 +386,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
         if not round_number:
             return Response(
-                {'error': 'round_number is required'},
+                {'error': 'round_number é obrigatório'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -402,7 +395,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
             result = manager.assign_boards_to_round(
                 int(round_number), board_assignments)
 
-            # Get updated pairings with Vision AI fields
+            # Obter emparelhamentos atualizados com campos de IA de Visão
             tournament_round = TournamentRound.objects.get(
                 tournament=tournament,
                 round_number=round_number
@@ -412,7 +405,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
                                           for pairing in updated_pairings]
 
             logger.info(
-                f"Assigned boards for tournament {tournament.name}, round {round_number}")
+                f"Tabuleiros atribuídos para o torneio {tournament.name}, ronda {round_number}")
 
             return Response(result)
 
@@ -423,23 +416,23 @@ class TournamentViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             logger.error(
-                f"Error assigning boards for tournament {tournament.id}: {str(e)}")
+                f"Erro ao atribuir tabuleiros para o torneio {tournament.id}: {str(e)}")
             return Response(
-                {'error': 'Failed to assign boards'},
+                {'error': 'Falha ao atribuir tabuleiros'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
 class TournamentJoinByCodeView(viewsets.GenericViewSet):
     """
-    Separate view for joining tournaments by join code
+    Vista separada para aderir a torneios via código de adesão
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TournamentJoinSerializer
 
     @method_decorator(ratelimit(key='user', rate='10/m', method='POST', block=True))
     def create(self, request):
-        """Join tournament using join code"""
+        """Participar num torneio usando o código de adesão"""
         if getattr(request.user, 'is_guest', False):
             return Response(
                 {'error': 'Os convidados não podem participar em torneios. Registe-se para jogar.'},
@@ -455,30 +448,30 @@ class TournamentJoinByCodeView(viewsets.GenericViewSet):
             tournament = Tournament.objects.get(join_code=join_code)
         except Tournament.DoesNotExist:
             return Response(
-                {'error': 'Invalid join code'},
+                {'error': 'Código de adesão inválido'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check if user is already a participant
+        # Verificar se o utilizador já é um participante
         if TournamentParticipant.objects.filter(
             tournament=tournament,
             user=request.user
         ).exists():
             return Response(
-                {'error': 'You are already registered for this tournament'},
+                {'error': 'Já está registado neste torneio'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Add user as participant
+        # Adicionar utilizador como participante
         participant = TournamentParticipant.objects.create(
             tournament=tournament,
             user=request.user
         )
 
         logger.info(
-            f"User {request.user.username} joined tournament {tournament.name} via join code")
+            f"Utilizador {request.user.username} aderiu ao torneio {tournament.name} via código de adesão")
 
-        # Return tournament details
+        # Retornar detalhes do torneio
         tournament_serializer = TournamentSerializer(
             tournament, context={'request': request})
         return Response({

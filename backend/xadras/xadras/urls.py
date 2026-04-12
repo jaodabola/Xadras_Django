@@ -1,18 +1,18 @@
 """
-URL configuration for xadras project.
+Configuração de URL para o projeto xadras.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
+A lista `urlpatterns` encaminha URLs para vistas. Para mais informações, consulte:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Exemplos:
+Vistas de função
+    1. Adicionar uma importação:  from my_app import views
+    2. Adicionar um URL a urlpatterns:  path('', views.home, name='home')
+Vistas baseadas em classes
+    1. Adicionar uma importação:  from other_app.views import Home
+    2. Adicionar um URL a urlpatterns:  path('', Home.as_view(), name='home')
+Incluir outro URLconf
+    1. Importar a função include(): from django.urls import include, path
+    2. Adicionar um URL a urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include
@@ -26,8 +26,7 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path('api/game/', include('game.urls')),
     path('api/matchmaking/', include('matchmaking.urls')),
-    path('api/', include('tournaments.urls')),  # Tournament endpoints
-    path('api/', include('cameras.urls')),  # Camera & Stream endpoints
+    path('api/', include('tournaments.urls')),  # Endpoints de torneio
 ]
 
 if settings.DEBUG:

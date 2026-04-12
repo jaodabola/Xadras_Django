@@ -1,3 +1,4 @@
+# XADRAS - Configuração da App de Contas
 from django.apps import AppConfig
 
 

@@ -1,5 +1,5 @@
-# XADRAS - Tournament Admin
-# Django admin configuration for tournament models
+# XADRAS - Administração de Torneios
+# Configuração do Django admin para os modelos de torneio
 
 from django.contrib import admin
 from .models import Tournament, TournamentParticipant, TournamentRound, TournamentPairing
@@ -17,19 +17,19 @@ class TournamentAdmin(admin.ModelAdmin):
                        'participant_count', 'created_at', 'updated_at']
 
     fieldsets = (
-        ('Basic Information', {
+        ('Informação Básica', {
             'fields': ('name', 'description', 'tournament_type', 'status')
         }),
-        ('Configuration', {
+        ('Configuração', {
             'fields': ('max_participants', 'is_public', 'vision_enabled', 'join_code', 'time_control', 'increment')
         }),
-        ('Management', {
+        ('Gestão', {
             'fields': ('created_by', 'current_round', 'total_rounds')
         }),
-        ('Timing', {
+        ('Horários', {
             'fields': ('registration_deadline', 'start_date', 'end_time')
         }),
-        ('System', {
+        ('Sistema', {
             'fields': ('id', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         })
@@ -47,13 +47,13 @@ class TournamentParticipantAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'initial_rating', 'joined_at']
 
     fieldsets = (
-        ('Participant', {
+        ('Participante', {
             'fields': ('tournament', 'user', 'is_active')
         }),
-        ('Tournament Data', {
+        ('Dados do Torneio', {
             'fields': ('seed', 'initial_rating', 'score', 'tiebreak_scores')
         }),
-        ('System', {
+        ('Sistema', {
             'fields': ('id', 'joined_at'),
             'classes': ('collapse',)
         })
@@ -88,4 +88,4 @@ class TournamentPairingAdmin(admin.ModelAdmin):
 
     def tournament(self, obj):
         return obj.round.tournament.name
-    tournament.short_description = 'Tournament'
+    tournament.short_description = 'Torneio'

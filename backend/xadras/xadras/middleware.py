@@ -1,6 +1,6 @@
-# XADRAS - Rate Limiting Middleware
-# Implementation based on Security AI configuration
-# Priority: CRITICAL - Security requirement
+# XADRAS - Middleware de Rate Limiting
+# Implementação baseada na configuração de IA de Segurança
+# Prioridade: CRÍTICA - Requisito de segurança
 
 from django.http import JsonResponse
 from django.core.cache import cache
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class RateLimitMiddleware:
     """
-    Middleware to handle rate limiting exceptions and provide consistent responses
+    Middleware para lidar com exceções de limite de taxa (rate limiting) e fornecer respostas consistentes
     """
 
     def __init__(self, get_response):
@@ -26,24 +26,24 @@ class RateLimitMiddleware:
     def process_exception(self, request, exception):
         if isinstance(exception, Ratelimited):
             logger.warning(
-                f"Rate limit exceeded for {request.META.get('REMOTE_ADDR')} on {request.path}")
+                f"Limite de taxa excedido para {request.META.get('REMOTE_ADDR')} em {request.path}")
             return JsonResponse({
-                'error': 'Rate limit exceeded',
-                'message': 'Too many requests. Please try again later.',
-                'retry_after': 60  # seconds
+                'error': 'Limite de taxa excedido',
+                'message': 'Demasiados pedidos. Por favor, tente novamente mais tarde.',
+                'retry_after': 60  # segundos
             }, status=429)
         return None
 
 
 class WebSocketRateLimitMiddleware:
     """
-    Custom middleware for WebSocket connection rate limiting
-    Based on Security AI specifications
+    Middleware personalizado para limite de taxa de ligação WebSocket
+    Baseado nas especificações da IA de Segurança
     """
 
     @staticmethod
     def check_connection_limit(user, ip_address):
-        """Check if user/IP has exceeded WebSocket connection limits"""
+        """Verificar se o utilizador/IP excedeu os limites de ligação WebSocket"""
         # Para utilizadores anónimos/guests, usar IP como identificador
         if user.is_authenticated:
             user_key = f"ws_connections_user_{user.id}"
@@ -55,21 +55,21 @@ class WebSocketRateLimitMiddleware:
         user_connections = cache.get(user_key, 0)
         ip_connections = cache.get(ip_key, 0)
 
-        # Limits
+        # Limites
         MAX_CONNECTIONS_PER_USER = 10
         MAX_CONNECTIONS_PER_IP = 50
 
         if user_connections >= MAX_CONNECTIONS_PER_USER:
-            return False, f"User connection limit exceeded ({MAX_CONNECTIONS_PER_USER})"
+            return False, f"Limite de ligação do utilizador excedido ({MAX_CONNECTIONS_PER_USER})"
 
         if ip_connections >= MAX_CONNECTIONS_PER_IP:
-            return False, f"IP connection limit exceeded ({MAX_CONNECTIONS_PER_IP})"
+            return False, f"Limite de ligação de IP excedido ({MAX_CONNECTIONS_PER_IP})"
 
-        return True, "Connection allowed"
+        return True, "Ligação permitida"
 
     @staticmethod
     def increment_connection_count(user, ip_address):
-        """Increment connection counters"""
+        """Incrementar contadores de ligação"""
         if user.is_authenticated:
             user_key = f"ws_connections_user_{user.id}"
         else:
@@ -82,7 +82,7 @@ class WebSocketRateLimitMiddleware:
 
     @staticmethod
     def decrement_connection_count(user, ip_address):
-        """Decrement connection counters"""
+        """Decrementar contadores de ligação"""
         if user.is_authenticated:
             user_key = f"ws_connections_user_{user.id}"
         else:
@@ -102,29 +102,24 @@ class WebSocketRateLimitMiddleware:
         else:
             cache.delete(ip_key)
 
-# Rate limiting decorators for common endpoints
+# Decoradores de limite de taxa para endpoints comuns
 
 
 def auth_rate_limit(view_func):
-    """Rate limiting for authentication endpoints"""
+    """Limite de taxa para endpoints de autenticação"""
     return ratelimit(key='ip', rate='5/m', method='POST', block=True)(view_func)
 
 
 def game_rate_limit(view_func):
-    """Rate limiting for game endpoints"""
+    """Limite de taxa para endpoints de jogo"""
     return ratelimit(key='user', rate='60/m', method='POST', block=False)(view_func)
 
 
 def matchmaking_rate_limit(view_func):
-    """Rate limiting for matchmaking endpoints"""
+    """Limite de taxa para endpoints de matchmaking"""
     return ratelimit(key='user', rate='20/m', method='POST', block=True)(view_func)
 
 
 def tournament_rate_limit(view_func):
-    """Rate limiting for tournament endpoints"""
+    """Limite de taxa para endpoints de torneio"""
     return ratelimit(key='user', rate='5/m', method='POST', block=True)(view_func)
-
-
-def camera_rate_limit(view_func):
-    """Rate limiting for camera endpoints"""
-    return ratelimit(key='user', rate='2/m', method='POST', block=True)(view_func)

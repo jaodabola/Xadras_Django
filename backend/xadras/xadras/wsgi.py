@@ -1,9 +1,9 @@
 """
-WSGI config for xadras project.
+Configuração WSGI para o projeto xadras.
 
-It exposes the WSGI callable as a module-level variable named ``application``.
+Expõe o chamável WSGI como uma variável de nível de módulo chamada ``application``.
 
-For more information on this file, see
+Para mais informações sobre este ficheiro, consulte
 https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
 """
 

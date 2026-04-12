@@ -1,6 +1,6 @@
-# XADRAS - Tournament Pairing Algorithms
-# Implementation by Tournament Logic AI
-# Priority: CRITICAL - Swiss System, Single Elimination, Round Robin
+# XADRAS - Algoritmos de Emparelhamento de Torneios
+# Implementação pela Tournament Logic AI
+# Prioridade: CRÍTICA - Sistema Suíço, Eliminação Única, Round Robin
 
 from django.db import transaction
 from django.contrib.auth import get_user_model
@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 
 class SwissPairingEngine:
     """
-    Swiss System pairing algorithm implementation
+    Implementação do algoritmo de emparelhamento Sistema Suíço
 
-    Features:
-    - Score-based grouping
-    - Rating-based pairing within groups
-    - Color balance (avoid 3 consecutive same colors)
-    - Avoid repeat pairings
-    - Bye management for odd numbers
+    Funcionalidades:
+    - Agrupamento baseado em pontuação
+    - Emparelhamento baseado em rating dentro dos grupos
+    - Equilíbrio de cores (evitar 3 cores iguais consecutivas)
+    - Evitar repetição de emparelhamentos
+    - Gestão de bye para números ímpares
     """
 
     def __init__(self, tournament: Tournament):
@@ -36,35 +36,35 @@ class SwissPairingEngine:
 
     def generate_pairings(self, round_number: int) -> List[Dict]:
         """
-        Generate Swiss system pairings for the specified round
+        Gerar emparelhamentos do sistema suíço para a ronda especificada
 
         Args:
-            round_number: The round number to generate pairings for
+            round_number: O número da ronda para a qual gerar emparelhamentos
 
         Returns:
-            List of pairing dictionaries with player assignments
+            Lista de dicionários de emparelhamento com atribuições de jogadores
         """
         logger.info(
-            f"Generating Swiss pairings for tournament {self.tournament.name}, round {round_number}")
+            f"Gerando emparelhamentos Suíços para o torneio {self.tournament.name}, ronda {round_number}")
 
         if len(self.participants) < 2:
-            raise ValueError("Need at least 2 participants for Swiss pairings")
+            raise ValueError("Necessários pelo menos 2 participantes para emparelhamentos Suíços")
 
-        # PROPER BYE HANDLING: Handle odd number of players FIRST
+        # GESTÃO CORRETA DE BYE: Lidar PRIMEIRO com número ímpar de jogadores
         pairings = []
         active_participants = list(self.participants)
 
-        # If odd number of participants, select bye player first
+        # Se houver um número ímpar de participantes, selecionar primeiro o jogador com bye
         if len(active_participants) % 2 == 1:
             bye_player = self._select_bye_player(active_participants)
             if bye_player:
                 bye_pairing = self._create_bye_pairing(bye_player)
                 pairings.append(bye_pairing)
                 active_participants.remove(bye_player)
-                logger.info(f"Selected bye player: {bye_player.user.username}")
+                logger.info(f"Jogador selecionado para bye: {bye_player.user.username}")
 
-        # Now work with even number of participants
-        # Group remaining participants by score
+        # Agora trabalhar com número par de participantes
+        # Agrupar participantes restantes por pontuação
         score_groups = {}
         for participant in active_participants:
             score = participant.score
@@ -72,11 +72,11 @@ class SwissPairingEngine:
                 score_groups[score] = []
             score_groups[score].append(participant)
 
-        # Sort groups by score (highest first)
+        # Ordenar grupos por pontuação (maior primeiro)
         score_groups = dict(sorted(score_groups.items(),
                             key=lambda x: x[0], reverse=True))
 
-        # Generate pairings within each score group
+        # Gerar emparelhamentos dentro de cada grupo de pontuação
         unpaired_players = []
 
         for score, players in score_groups.items():
@@ -84,17 +84,17 @@ class SwissPairingEngine:
             pairings.extend(group_pairings)
             unpaired_players.extend(group_unpaired)
 
-        # Handle any remaining unpaired players from different score groups
+        # Lidar com quaisquer jogadores não emparelhados de diferentes grupos de pontuação
         if unpaired_players:
             cross_group_pairings, final_unpaired = self._pair_across_groups(
                 unpaired_players)
             pairings.extend(cross_group_pairings)
 
-            # With proper bye handling, this should be rare
+            # Com a gestão correta de bye, isto deve ser raro
             if final_unpaired:
                 logger.warning(
-                    f"Still have {len(final_unpaired)} unpaired players after bye handling")
-                # Force pair remaining players
+                    f"Ainda restam {len(final_unpaired)} jogadores não emparelhados após gestão de bye")
+                # Forçar emparelhamento dos jogadores restantes
                 while len(final_unpaired) >= 2:
                     player1 = final_unpaired.pop(0)
                     player2 = final_unpaired.pop(0)
@@ -102,11 +102,11 @@ class SwissPairingEngine:
                     pairings.append(pairing)
 
         logger.info(
-            f"Generated {len(pairings)} pairings for round {round_number}")
+            f"Gerados {len(pairings)} emparelhamentos para a ronda {round_number}")
         return pairings
 
     def _group_by_score(self) -> Dict[float, List[TournamentParticipant]]:
-        """Group participants by their current score"""
+        """Agrupar participantes pela sua pontuação atual"""
         score_groups = {}
 
         for participant in self.participants:
@@ -115,20 +115,20 @@ class SwissPairingEngine:
                 score_groups[score] = []
             score_groups[score].append(participant)
 
-        # Sort groups by score (highest first)
+        # Ordenar grupos por pontuação (maior primeiro)
         return dict(sorted(score_groups.items(), key=lambda x: x[0], reverse=True))
 
     def _pair_within_group(self, players: List[TournamentParticipant]) -> Tuple[List[Dict], List[TournamentParticipant]]:
         """
-        Pair players within a score group
+        Emparelhar jogadores dentro de um grupo de pontuação
 
         Returns:
-            Tuple of (pairings, unpaired_players)
+            Tuplo de (emparelhamentos, jogadores_nao_emparelhados)
         """
         if len(players) < 2:
             return [], players
 
-        # Sort by rating for better pairings
+        # Ordenar por rating para melhores emparelhamentos
         players_sorted = sorted(
             players, key=lambda p: p.initial_rating, reverse=True)
 
@@ -136,7 +136,7 @@ class SwissPairingEngine:
         unpaired = []
         used_players = set()
 
-        # Try to pair players optimally
+        # Tentar emparelhar jogadores de forma ideal
         for i, player1 in enumerate(players_sorted):
             if player1.id in used_players:
                 continue
@@ -148,7 +148,7 @@ class SwissPairingEngine:
                 if player2.id in used_players:
                     continue
 
-                # Calculate pairing quality score
+                # Calcular pontuação de qualidade do emparelhamento
                 pairing_score = self._calculate_pairing_score(player1, player2)
 
                 if pairing_score > best_score:
@@ -163,7 +163,7 @@ class SwissPairingEngine:
             else:
                 unpaired.append(player1)
 
-        # Add any remaining unpaired players
+        # Adicionar quaisquer jogadores restantes não emparelhados
         for player in players_sorted:
             if player.id not in used_players:
                 unpaired.append(player)
@@ -172,7 +172,7 @@ class SwissPairingEngine:
 
     def _pair_across_groups(self, players: List[TournamentParticipant]) -> Tuple[List[Dict], List[TournamentParticipant]]:
         """
-        Pair remaining players across different score groups
+        Emparelhar jogadores restantes entre diferentes grupos de pontuação
         """
         if len(players) < 2:
             return [], players
@@ -183,7 +183,7 @@ class SwissPairingEngine:
         while len(remaining) >= 2:
             player1 = remaining.pop(0)
 
-            # Find best opponent from remaining players
+            # Encontrar o melhor adversário entre os jogadores restantes
             best_opponent = None
             best_score = -1
             best_index = -1
@@ -204,48 +204,48 @@ class SwissPairingEngine:
 
     def _calculate_pairing_score(self, player1: TournamentParticipant, player2: TournamentParticipant) -> float:
         """
-        Calculate quality score for a potential pairing
-        Higher score = better pairing
+        Calcular a pontuação de qualidade para um potencial emparelhamento
+        Pontuação mais alta = melhor emparelhamento
 
-        Factors:
-        - Haven't played before (highest priority)
-        - Color balance
-        - Rating proximity
+        Critérios:
+        - Não terem jogado antes (prioridade máxima)
+        - Equilíbrio de cores
+        - Proximidade de rating
         """
         score = 0.0
 
-        # Check if they've played before (most important factor)
+        # Verificar se já jogaram antes (fator mais importante)
         if not self._have_played_before(player1, player2):
             score += 100.0
         else:
-            score -= 50.0  # Heavy penalty for repeat pairings
+            score -= 50.0  # Penalização pesada para repetição de emparelhamentos
 
-        # Color balance factor
+        # Fator de equilíbrio de cores
         color_balance_score = self._calculate_color_balance_score(
             player1, player2)
         score += color_balance_score * 10.0
 
-        # Rating proximity factor (closer ratings = better pairing)
+        # Fator de proximidade de rating (ratings mais próximos = melhor emparelhamento)
         rating_diff = abs(player1.initial_rating - player2.initial_rating)
-        rating_score = max(0, 400 - rating_diff) / 400.0  # Normalize to 0-1
+        rating_score = max(0, 400 - rating_diff) / 400.0  # Normalizar para 0-1
         score += rating_score * 5.0
 
         return score
 
     def _have_played_before(self, player1: TournamentParticipant, player2: TournamentParticipant) -> bool:
-        """Check if two players have played against each other before"""
+        """Verificar se dois jogadores já jogaram um contra o outro antes"""
         pairing_key = tuple(sorted([player1.user.id, player2.user.id]))
         return pairing_key in self.previous_pairings
 
     def _calculate_color_balance_score(self, player1: TournamentParticipant, player2: TournamentParticipant) -> float:
         """
-        Calculate color balance score for pairing
-        Prefer pairings that balance colors
+        Calcular a pontuação de equilíbrio de cores para o emparelhamento
+        Preferir emparelhamentos que equilibram cores
         """
         player1_colors = self._get_player_color_history(player1.user)
         player2_colors = self._get_player_color_history(player2.user)
 
-        # Count recent colors (last 2 games)
+        # Contar cores recentes (últimos 2 jogos)
         player1_recent_white = sum(
             1 for color in player1_colors[-2:] if color == 'white')
         player1_recent_black = sum(
@@ -256,16 +256,16 @@ class SwissPairingEngine:
         player2_recent_black = sum(
             1 for color in player2_colors[-2:] if color == 'black')
 
-        # Prefer giving white to player who has played black more recently
+        # Preferir dar brancas ao jogador que jogou de pretas mais recentemente
         if player1_recent_black > player1_recent_white and player2_recent_white > player2_recent_black:
-            return 1.0  # Good balance: player1 gets white, player2 gets black
+            return 1.0  # Bom equilíbrio: player1 recebe brancas, player2 recebe pretas
         elif player2_recent_black > player2_recent_white and player1_recent_white > player1_recent_black:
-            return 1.0  # Good balance: player2 gets white, player1 gets black
+            return 1.0  # Bom equilíbrio: player2 recebe brancas, player1 recebe pretas
         else:
-            return 0.5  # Neutral balance
+            return 0.5  # Equilíbrio neutro
 
     def _get_player_color_history(self, user: User) -> List[str]:
-        """Get player's color history in this tournament"""
+        """Obter histórico de cores do jogador neste torneio"""
         colors = []
 
         pairings = TournamentPairing.objects.filter(
@@ -280,25 +280,25 @@ class SwissPairingEngine:
         ).order_by('round__round_number')
         colors.extend(['black'] * pairings.count())
 
-        # This is a simplified version, should be properly ordered by round
+        # Esta é uma versão simplificada, deve ser devidamente ordenada por ronda
         return sorted(colors)
 
     def _create_pairing(self, player1: TournamentParticipant, player2: TournamentParticipant) -> Dict:
         """
-        Create a pairing between two players
-        Determine colors based on color balance
+        Criar um emparelhamento entre dois jogadores
+        Determinar cores com base no equilíbrio de cores
         """
-        # Determine colors
+        # Determinar cores
         player1_colors = self._get_player_color_history(player1.user)
         player2_colors = self._get_player_color_history(player2.user)
 
-        # Simple color assignment logic (can be improved)
+        # Lógica simples de atribuição de cores (pode ser melhorada)
         player1_white_count = player1_colors.count('white')
         player1_black_count = player1_colors.count('black')
         player2_white_count = player2_colors.count('white')
         player2_black_count = player2_colors.count('black')
 
-        # Assign white to player who has played black more or has higher rating if equal
+        # Atribuir as brancas ao jogador que jogou mais de pretas ou que tem rating superior se for igual
         if player1_black_count > player1_white_count:
             white_player, black_player = player1, player2
         elif player2_black_count > player2_white_count:
@@ -317,15 +317,15 @@ class SwissPairingEngine:
 
     def _select_bye_player(self, participants: List[TournamentParticipant]) -> Optional[TournamentParticipant]:
         """
-        Select player who should receive bye
-        Priority: Player who hasn't had bye yet, then lowest rated
+        Selecionar o jogador que deve receber o bye
+        Prioridade: Jogador que ainda não teve bye, seguido pelo de menor rating.
         """
-        # Get players who haven't had bye yet in this tournament
+        # Obter jogadores que ainda não tiveram bye neste torneio
         players_without_bye = []
         players_with_bye = []
 
         for participant in participants:
-            # Check if player has had bye in this tournament
+            # Verificar se o jogador já teve bye neste torneio
             has_bye = TournamentPairing.objects.filter(
                 round__tournament=self.tournament,
                 bye_player=participant.user,
@@ -337,17 +337,17 @@ class SwissPairingEngine:
             else:
                 players_without_bye.append(participant)
 
-        # Prefer players who haven't had bye
+        # Preferir jogadores que ainda não tiveram bye
         candidates = players_without_bye if players_without_bye else players_with_bye
 
         if not candidates:
             return None
 
-        # Select lowest rated player from candidates
+        # Selecionar o jogador de menor rating entre os candidatos
         return min(candidates, key=lambda p: p.initial_rating)
 
     def _create_bye_pairing(self, player: TournamentParticipant) -> Dict:
-        """Create a bye pairing for a player"""
+        """Criar um emparelhamento de bye para um jogador"""
         return {
             'white_player': None,
             'black_player': None,
@@ -356,7 +356,7 @@ class SwissPairingEngine:
         }
 
     def _get_previous_pairings(self) -> set:
-        """Get set of all previous pairings in this tournament"""
+        """Obter o conjunto de todos os emparelhamentos anteriores neste torneio"""
         pairings = set()
 
         tournament_pairings = TournamentPairing.objects.filter(
@@ -375,13 +375,13 @@ class SwissPairingEngine:
 
 class SingleEliminationEngine:
     """
-    Single Elimination tournament pairing engine
+    Motor de emparelhamento para torneios de Eliminação Única
 
-    Features:
-    - Seeded bracket generation
-    - Power of 2 bracket structure
-    - Winner advancement logic
-    - Bracket visualization data
+    Funcionalidades:
+    - Geração de árvore (bracket) semeada
+    - Estrutura de árvore com potência de 2
+    - Lógica de avanço para o vencedor
+    - Dados para visualização da árvore
     """
 
     def __init__(self, tournament: Tournament):
@@ -393,21 +393,21 @@ class SingleEliminationEngine:
 
     def generate_bracket(self) -> List[Dict]:
         """
-        Generate single elimination bracket
+        Gerar a árvore (bracket) de eliminação única
 
         Returns:
-            List of first round pairings
+            Lista de emparelhamentos da primeira ronda
         """
         logger.info(
-            f"Generating elimination bracket for tournament {self.tournament.name}")
+            f"Gerando árvore de eliminação para o torneio {self.tournament.name}")
 
         participant_count = len(self.participants)
         if participant_count < 2:
             raise ValueError(
-                "Need at least 2 participants for elimination tournament")
+                "Necessários pelo menos 2 participantes para torneio de eliminação")
 
-        # For single elimination, we need power of 2 participants
-        # If not power of 2, some players get byes in first round
+        # Para eliminação única, precisamos de um número de participantes que seja potência de 2
+        # Se não for potência de 2, alguns jogadores recebem byes na primeira ronda
         next_power_of_2 = 1
         while next_power_of_2 < participant_count:
             next_power_of_2 *= 2
@@ -418,14 +418,14 @@ class SingleEliminationEngine:
 
         pairings = []
 
-        # Create first round pairings with seeded bracket
+        # Criar emparelhamentos da primeira ronda com árvore semeada (seeded)
         players_copy = self.participants.copy()
 
-        # Give byes to highest seeds
+        # Dar byes aos cabeças de série mais altos
         bye_players = players_copy[:byes]
         playing_players = players_copy[byes:]
 
-        # Create byes
+        # Criar byes
         for player in bye_players:
             bye_pairing = {
                 'white_player': None,
@@ -435,11 +435,11 @@ class SingleEliminationEngine:
             }
             pairings.append(bye_pairing)
 
-        # Create first round games
-        # Pair highest remaining seed with lowest, etc.
+        # Criar jogos da primeira ronda
+        # Emparelhar o cabeça de série mais alto com o mais baixo, etc.
         while len(playing_players) >= 2:
-            high_seed = playing_players.pop(0)  # Highest seed
-            low_seed = playing_players.pop()    # Lowest seed
+            high_seed = playing_players.pop(0)  # Semente mais alta
+            low_seed = playing_players.pop()    # Semente mais baixa
 
             pairing = {
                 'white_player': high_seed.user,
@@ -450,16 +450,16 @@ class SingleEliminationEngine:
             pairings.append(pairing)
 
         logger.info(
-            f"Generated elimination bracket with {len(pairings)} first round pairings")
+            f"Gerada árvore de eliminação com {len(pairings)} emparelhamentos na primeira ronda")
         return pairings
 
     def generate_next_round(self, current_round: int) -> List[Dict]:
         """
-        Generate next round pairings based on previous round results
+        Gerar emparelhamentos da próxima ronda com base nos resultados da ronda anterior
         """
-        logger.info(f"Generating elimination round {current_round + 1}")
+        logger.info(f"Gerando ronda de eliminação {current_round + 1}")
 
-        # Get winners from previous round
+        # Obter os vencedores da ronda anterior
         previous_round = TournamentRound.objects.get(
             tournament=self.tournament,
             round_number=current_round
@@ -472,10 +472,10 @@ class SingleEliminationEngine:
                 winners.append(winner)
 
         if len(winners) < 2:
-            logger.info("Tournament finished - less than 2 winners remaining")
+            logger.info("Torneio terminado - restam menos de 2 vencedores")
             return []
 
-        # Pair winners for next round
+        # Emparelhar vencedores para a próxima ronda
         pairings = []
         while len(winners) >= 2:
             player1 = winners.pop(0)
@@ -489,7 +489,7 @@ class SingleEliminationEngine:
             }
             pairings.append(pairing)
 
-        # Handle odd winner (shouldn't happen in proper elimination)
+        # Lidar com vencedor ímpar (não deve acontecer numa eliminação correta)
         if winners:
             bye_pairing = {
                 'white_player': None,
@@ -502,7 +502,7 @@ class SingleEliminationEngine:
         return pairings
 
     def _get_pairing_winner(self, pairing: TournamentPairing) -> Optional[User]:
-        """Get winner of a tournament pairing"""
+        """Obter o vencedor de um emparelhamento de torneio"""
         if pairing.result == TournamentPairing.BYE:
             return pairing.bye_player
         elif pairing.result == TournamentPairing.WHITE_WIN:
@@ -510,18 +510,18 @@ class SingleEliminationEngine:
         elif pairing.result == TournamentPairing.BLACK_WIN:
             return pairing.black_player
         else:
-            # Game not finished or draw (handle draws in elimination?)
+            # Jogo não terminado ou empate (lidar com empates na eliminação?)
             return None
 
 
 class RoundRobinEngine:
     """
-    Round Robin tournament pairing engine
+    Motor de emparelhamento para torneios Round Robin (Todos contra todos)
 
-    Features:
-    - Complete round-robin scheduling
-    - Every player plays every other player once
-    - Color balance across tournament
+    Funcionalidades:
+    - Escalonamento round-robin completo
+    - Cada jogador joga contra todos os outros uma vez
+    - Equilíbrio de cores ao longo do torneio
     """
 
     def __init__(self, tournament: Tournament):
@@ -533,31 +533,31 @@ class RoundRobinEngine:
 
     def generate_all_rounds(self) -> Dict[int, List[Dict]]:
         """
-        Generate all rounds for round robin tournament
+        Gerar todas as rondas para um torneio round robin
 
         Returns:
             Dictionary mapping round number to list of pairings
         """
         logger.info(
-            f"Generating round robin schedule for tournament {self.tournament.name}")
+            f"Gerando calendário round robin para o torneio {self.tournament.name}")
 
         participant_count = len(self.participants)
         if participant_count < 2:
             raise ValueError(
                 "Need at least 2 participants for round robin tournament")
 
-        # Round robin requires n-1 rounds for n players (or n rounds if n is odd)
+        # Round robin requer n-1 rondas para n jogadores (ou n rondas se n for ímpar)
         total_rounds = participant_count - \
             1 if participant_count % 2 == 0 else participant_count
 
         all_pairings = {}
 
-        # Generate round robin schedule using circle method
+        # Gerar o calendário round robin usando o método circular
         players = [p.user for p in self.participants]
 
-        # If odd number of players, add a "bye" placeholder
+        # Se houver um número ímpar de jogadores, adicionar um placeholder de "bye"
         if len(players) % 2 == 1:
-            players.append(None)  # None represents bye
+            players.append(None)  # None representa o bye
 
         n = len(players)
 
@@ -569,7 +569,7 @@ class RoundRobinEngine:
                 player2 = players[n - 1 - i]
 
                 if player1 is None:
-                    # player2 gets bye
+                    # player2 recebe bye
                     bye_pairing = {
                         'white_player': None,
                         'black_player': None,
@@ -578,7 +578,7 @@ class RoundRobinEngine:
                     }
                     round_pairings.append(bye_pairing)
                 elif player2 is None:
-                    # player1 gets bye
+                    # player1 recebe bye
                     bye_pairing = {
                         'white_player': None,
                         'black_player': None,
@@ -587,7 +587,7 @@ class RoundRobinEngine:
                     }
                     round_pairings.append(bye_pairing)
                 else:
-                    # Alternate colors based on round and position
+                    # Alternar cores com base na ronda e posição
                     if (round_num + i) % 2 == 0:
                         white_player, black_player = player1, player2
                     else:
@@ -603,17 +603,17 @@ class RoundRobinEngine:
 
             all_pairings[round_num] = round_pairings
 
-            # Rotate players for next round (keep first player fixed)
+            # Rodar jogadores para a próxima ronda (manter o primeiro jogador fixo)
             players = [players[0]] + [players[-1]] + players[1:-1]
 
         logger.info(
-            f"Generated round robin schedule with {total_rounds} rounds")
+            f"Gerado calendário round robin com {total_rounds} rondas")
         return all_pairings
 
 
 def generate_swiss_pairings(tournament_id: str, round_number: int) -> List[Dict]:
     """
-    Main function to generate Swiss system pairings
+    Função principal para gerar emparelhamentos do sistema suíço
 
     Args:
         tournament_id: UUID of the tournament
@@ -627,18 +627,18 @@ def generate_swiss_pairings(tournament_id: str, round_number: int) -> List[Dict]
 
         if tournament.tournament_type != Tournament.SWISS:
             raise ValueError(
-                f"Tournament format is {tournament.tournament_type}, not Swiss")
+                f"O formato do torneio é {tournament.tournament_type}, não Suíço")
 
         engine = SwissPairingEngine(tournament)
         return engine.generate_pairings(round_number)
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")
 
 
 def generate_elimination_pairings(tournament_id: str, round_number: int) -> List[Dict]:
     """
-    Main function to generate single elimination pairings
+    Função principal para gerar emparelhamentos de eliminação única
 
     Args:
         tournament_id: UUID of the tournament
@@ -652,7 +652,7 @@ def generate_elimination_pairings(tournament_id: str, round_number: int) -> List
 
         if tournament.tournament_type != Tournament.SINGLE_ELIMINATION:
             raise ValueError(
-                f"Tournament format is {tournament.tournament_type}, not Single Elimination")
+                f"O formato do torneio é {tournament.tournament_type}, não Eliminação Única")
 
         engine = SingleEliminationEngine(tournament)
 
@@ -662,12 +662,12 @@ def generate_elimination_pairings(tournament_id: str, round_number: int) -> List
             return engine.generate_next_round(round_number - 1)
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")
 
 
 def generate_round_robin_pairings(tournament_id: str) -> Dict[int, List[Dict]]:
     """
-    Main function to generate all round robin pairings
+    Função principal para gerar todos os emparelhamentos round robin
 
     Args:
         tournament_id: UUID of the tournament
@@ -680,10 +680,10 @@ def generate_round_robin_pairings(tournament_id: str) -> Dict[int, List[Dict]]:
 
         if tournament.tournament_type != Tournament.ROUND_ROBIN:
             raise ValueError(
-                f"Tournament format is {tournament.tournament_type}, not Round Robin")
+                f"O formato do torneio é {tournament.tournament_type}, não Round Robin")
 
         engine = RoundRobinEngine(tournament)
         return engine.generate_all_rounds()
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")

@@ -49,21 +49,13 @@ class CustomUserSerializer(BaseUserSerializer):
         """
         Calcula a percentagem de vitórias do jogador.
         """
-
-        if obj.games_played == 0:
-            return 0
-
-        return round((obj.games_won / obj.games_played) * 100, 2)
+        return obj.get_win_rate()
 
     def get_draw_rate(self, obj):
         """
         Calcula a percentagem de empates do jogador.
         """
-
-        if obj.games_played == 0:
-            return 0
-
-        return round((obj.games_drawn / obj.games_played) * 100, 2)
+        return obj.get_draw_rate()
 
 
 class CustomUserCreateSerializer(BaseUserCreateSerializer):

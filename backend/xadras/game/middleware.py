@@ -4,6 +4,7 @@ from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.authtoken.models import Token
 
+
 @database_sync_to_async
 def get_user_from_token(token_key):
     try:
@@ -12,27 +13,30 @@ def get_user_from_token(token_key):
     except Token.DoesNotExist:
         return AnonymousUser()
 
+
 class TokenAuthMiddleware:
     """
-    Custom middleware that extracts the DRF token from the query string
-    e.g. ws://localhost:8000/ws/game/1/?token=abc123def
+    Middleware personalizado que extrai o token do DRF da string de consulta, 
+    por exemplo: ws://localhost:8000/ws/game/1/?token=abc123def.
     """
+
     def __init__(self, inner):
         self.inner = inner
 
     async def __call__(self, scope, receive, send):
         query_string = scope.get("query_string", b"").decode()
         query_params = urllib.parse.parse_qs(query_string)
-        
-        # Look for token parameter
+
+        # Procura for parametro do token
         token_key = query_params.get("token", [None])[0]
-        
+
         if token_key:
             scope["user"] = await get_user_from_token(token_key)
         else:
             scope["user"] = AnonymousUser()
 
         return await self.inner(scope, receive, send)
+
 
 def TokenAuthMiddlewareStack(inner):
     return TokenAuthMiddleware(AuthMiddlewareStack(inner))

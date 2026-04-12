@@ -7,10 +7,10 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-# Add project root to Python path
+# Adicionar a raiz do projeto ao path do Python
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Configure logging
+# Configurar o logging
 LOG_DIR = os.path.join(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))), 'logs')
 Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
@@ -25,17 +25,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger('matchmaking_service')
 
-# Matchmaking interval in seconds
+# Intervalo de matchmaking em segundos
 MATCHMAKING_INTERVAL = 10
 
 
 def log_matchmaking_result(result):
-    """Log the result of a matchmaking run"""
+    """Registar o resultado de uma execução de matchmaking"""
     if not result or not result.stdout:
         return
 
     try:
-        # Parse the JSON output from the management command
+        # Analisar o output JSON do comando de gestão
         output = json.loads(result.stdout)
         if 'matches' in output:
             for match in output['matches']:
@@ -59,14 +59,14 @@ def log_matchmaking_result(result):
             "Failed to parse matchmaking output",
             extra={
                 'event': 'parse_error',
-                # Log first 200 chars to avoid huge logs
+                # Registar os primeiros 200 caracteres para evitar logs gigantes
                 'output': result.stdout[:200]
             }
         )
 
 
 def run_matchmaking():
-    """Run the matchmaking command with enhanced logging"""
+    """Executar o comando de matchmaking com logging melhorado"""
     logger.info("Starting matchmaking service",
                 extra={'event': 'service_start'})
 
@@ -75,18 +75,18 @@ def run_matchmaking():
             logger.debug("Running matchmaking cycle",
                          extra={'event': 'cycle_start'})
 
-            # Run the matchmake command with JSON output
+            # Executar o comando matchmake com output em JSON
             result = subprocess.run(
                 ['python3', 'manage.py', 'matchmake', '--format=json'],
                 capture_output=True,
                 text=True
             )
 
-            # Log the result if there was output
+            # Registar o resultado se houver output
             if result.stdout.strip():
                 log_matchmaking_result(result)
 
-            # Log errors if any
+            # Registar erros se existirem
             if result.stderr:
                 err = result.stderr.strip()
                 if 'Not enough players in queue' in err or 'not enough players in queue' in err:
@@ -100,7 +100,7 @@ def run_matchmaking():
                         }
                     )
 
-            # Wait for the next interval
+            # Esperar pelo próximo intervalo
             time.sleep(MATCHMAKING_INTERVAL)
 
         except KeyboardInterrupt:
@@ -118,7 +118,7 @@ def run_matchmaking():
                 },
                 exc_info=True
             )
-            time.sleep(5)  # Wait before retrying on error
+            time.sleep(5)  # Esperar antes de tentar novamente em caso de erro
 
 
 if __name__ == "__main__":

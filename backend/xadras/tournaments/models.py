@@ -1,6 +1,6 @@
-# XADRAS - Tournament Models
-# Implementation based on Tournament AI specifications
-# Priority: CRITICAL - Required by 8+ AIs
+# XADRAS - Modelos de Torneio
+# Implementação baseada nas especificações da Tournament AI
+# Prioridade: CRÍTICA - Requerido por 8+ AIs
 
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -14,10 +14,10 @@ User = get_user_model()
 
 class Tournament(models.Model):
     """
-    Main tournament model supporting multiple formats
-    Based on Tournament AI specifications
+    Modelo principal de torneio suportando múltiplos formatos
+    Baseado nas especificações da Tournament AI
     """
-    # Tournament Formats
+    # Formatos de Torneio
     SWISS = 'SWISS'
     SINGLE_ELIMINATION = 'SINGLE_ELIMINATION'
     ROUND_ROBIN = 'ROUND_ROBIN'
@@ -28,7 +28,7 @@ class Tournament(models.Model):
         (ROUND_ROBIN, 'Round Robin'),
     ]
 
-    # Tournament Status
+    # Estado do Torneio
     REGISTRATION = 'REGISTRATION'
     IN_PROGRESS = 'IN_PROGRESS'
     FINISHED = 'FINISHED'
@@ -41,13 +41,13 @@ class Tournament(models.Model):
         (CANCELLED, 'Cancelled'),
     ]
 
-    # Basic Information
+    # Informações Básicas
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, help_text="Tournament name")
     description = models.TextField(
         blank=True, help_text="Tournament description")
 
-    # Tournament Configuration
+    # Configuração do Torneio
     tournament_type = models.CharField(
         max_length=20, choices=FORMAT_CHOICES, default=SWISS)
     status = models.CharField(
@@ -58,7 +58,7 @@ class Tournament(models.Model):
         help_text="Maximum number of participants"
     )
 
-    # Access Control
+    # Controlo de Acesso
     join_code = models.CharField(
         max_length=20,
         unique=True,
@@ -69,7 +69,7 @@ class Tournament(models.Model):
     vision_enabled = models.BooleanField(
         default=False, help_text="Enable physical board tracking integration")
 
-    # Management
+    # Gestão
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -77,7 +77,7 @@ class Tournament(models.Model):
         help_text="Tournament organizer"
     )
 
-    # Timing
+    # Agendamento
     registration_deadline = models.DateTimeField(
         null=True,
         blank=True,
@@ -94,7 +94,7 @@ class Tournament(models.Model):
         help_text="Tournament end time"
     )
 
-    # Tournament Progress
+    # Progresso do Torneio
     current_round = models.IntegerField(
         default=0, help_text="Current round number")
     total_rounds = models.IntegerField(
@@ -103,7 +103,7 @@ class Tournament(models.Model):
         help_text="Total planned rounds (calculated for some formats)"
     )
 
-    # Time Control
+    # Controlo de Tempo
     time_control = models.CharField(
         max_length=50,
         default="10+0",
@@ -114,7 +114,7 @@ class Tournament(models.Model):
         help_text="Increment added per move (seconds)"
     )
 
-    # Timestamps
+    # Datas de Registo
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -132,13 +132,13 @@ class Tournament(models.Model):
         return f"{self.name} ({self.get_tournament_type_display()})"
 
     def save(self, *args, **kwargs):
-        # Generate join code if not provided
+        # Gerar código de adesão se não for fornecido
         if not self.join_code:
             self.join_code = self.generate_join_code()
         super().save(*args, **kwargs)
 
     def generate_join_code(self):
-        """Generate unique join code for tournament"""
+        """Gerar código de adesão único para o torneio"""
         import random
         import string
 
@@ -150,17 +150,17 @@ class Tournament(models.Model):
 
     @property
     def participant_count(self):
-        """Get current number of participants"""
+        """Obter o número atual de participantes"""
         return self.participants.filter(is_active=True).count()
 
     @property
     def is_full(self):
-        """Check if tournament is at capacity"""
+        """Verificar se o torneio está cheio"""
         return self.participant_count >= self.max_participants
 
     @property
     def can_start(self):
-        """Check if tournament can start"""
+        """Verificar se o torneio pode começar"""
         return (
             self.status == self.REGISTRATION and
             self.participant_count >= 2 and
@@ -171,7 +171,7 @@ class Tournament(models.Model):
 
 class TournamentParticipant(models.Model):
     """
-    Participant in a tournament with scoring and seeding
+    Participante num torneio com pontuação e seeding
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tournament = models.ForeignKey(
@@ -181,7 +181,7 @@ class TournamentParticipant(models.Model):
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    # Tournament Specific Data
+    # Dados Específicos do Torneio
     seed = models.IntegerField(
         null=True,
         blank=True,
@@ -191,7 +191,7 @@ class TournamentParticipant(models.Model):
         help_text="Player's rating when joining tournament"
     )
 
-    # Scoring
+    # Pontuação
     score = models.FloatField(
         default=0.0,
         help_text="Tournament points (1 for win, 0.5 for draw, 0 for loss)"
@@ -201,13 +201,13 @@ class TournamentParticipant(models.Model):
         help_text="Tiebreaker scores (Buchholz, Sonneborn-Berger, etc.)"
     )
 
-    # Status
+    # Estado
     is_active = models.BooleanField(
         default=True,
         help_text="False if player withdrew from tournament"
     )
 
-    # Timestamps
+    # Datas de Registo
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -224,24 +224,24 @@ class TournamentParticipant(models.Model):
         return f"{self.user.username} in {self.tournament.name}"
 
     def save(self, *args, **kwargs):
-        # Set initial rating from user's current rating
+        # Definir rating inicial a partir do rating atual do utilizador
         if not self.initial_rating:
             self.initial_rating = getattr(self.user, 'elo_rating', 1200)
         super().save(*args, **kwargs)
 
     def update_score(self, result):
-        """Update score based on game result"""
+        """Atualizar pontuação com base no resultado do jogo"""
         if result == 'win':
             self.score += 1.0
         elif result == 'draw':
             self.score += 0.5
-        # Loss adds 0 points
+        # Derrota adiciona 0 pontos
         self.save()
 
     def calculate_tiebreakers(self):
-        """Calculate tiebreaker scores (Buchholz, Sonneborn-Berger, etc.)"""
-        # This will be implemented with the pairing algorithm
-        # For now, initialize empty tiebreakers
+        """Calcular pontuações de desempate (Buchholz, Sonneborn-Berger, etc.)"""
+        # Isto será implementado com o algoritmo de emparelhamento
+        # Por agora, inicializar desempates vazios
         if not self.tiebreak_scores:
             self.tiebreak_scores = {
                 'buchholz': 0.0,
@@ -253,9 +253,9 @@ class TournamentParticipant(models.Model):
 
 class TournamentRound(models.Model):
     """
-    A round in a tournament containing multiple pairings
+    Uma ronda num torneio contendo múltiplos emparelhamentos
     """
-    # Round Status
+    # Estado da Ronda
     PENDING = 'PENDING'
     IN_PROGRESS = 'IN_PROGRESS'
     COMPLETED = 'COMPLETED'
@@ -276,11 +276,11 @@ class TournamentRound(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=PENDING)
 
-    # Timing
+    # Agendamento
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
 
-    # Timestamps
+    # Datas de Registo
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -299,17 +299,17 @@ class TournamentRound(models.Model):
 
     @property
     def pairing_count(self):
-        """Get number of pairings in this round"""
+        """Obter o número de emparelhamentos nesta ronda"""
         return self.pairings.count()
 
     @property
     def completed_games(self):
-        """Get number of completed games in this round"""
+        """Obter o número de jogos concluídos nesta ronda"""
         return self.pairings.filter(game__status='FINISHED').count()
 
     @property
     def is_complete(self):
-        """Check if all games in round are finished"""
+        """Verificar se todos os jogos na ronda terminaram"""
         total_pairings = self.pairing_count
         if total_pairings == 0:
             return False
@@ -318,9 +318,9 @@ class TournamentRound(models.Model):
 
 class TournamentPairing(models.Model):
     """
-    A pairing between two players in a tournament round
+    Um emparelhamento entre dois jogadores numa ronda de torneio
     """
-    # Result Types
+    # Tipos de Resultado
     WHITE_WIN = 'WHITE_WIN'
     BLACK_WIN = 'BLACK_WIN'
     DRAW = 'DRAW'
@@ -344,7 +344,7 @@ class TournamentPairing(models.Model):
         related_name='pairings'
     )
 
-    # Players
+    # Jogadores
     white_player = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -360,7 +360,7 @@ class TournamentPairing(models.Model):
         blank=True
     )
 
-    # Bye player (for odd number of players)
+    # Jogador com Bye (para número ímpar de jogadores)
     bye_player = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -370,7 +370,7 @@ class TournamentPairing(models.Model):
         help_text="Player receiving bye (odd number of participants)"
     )
 
-    # Game Reference
+    # Referência ao Jogo
     game = models.OneToOneField(
         'game.Game',
         on_delete=models.SET_NULL,
@@ -380,7 +380,7 @@ class TournamentPairing(models.Model):
         help_text="Associated game (if not a bye)"
     )
 
-    # Results
+    # Resultados
     result = models.CharField(
         max_length=20,
         choices=RESULT_CHOICES,
@@ -388,14 +388,14 @@ class TournamentPairing(models.Model):
         blank=True
     )
 
-    # Board Assignment (for physical tournaments)
+    # Atribuição de Tabuleiro (para torneios físicos)
     board_number = models.IntegerField(
         null=True,
         blank=True,
         help_text="Physical board number for camera assignment"
     )
 
-    # Vision AI Integration Fields (Migration 0005)
+    # Campos de Integração com IA de Visão (Migração 0005)
     physical_board_id = models.CharField(
         max_length=10,
         null=True,
@@ -408,7 +408,7 @@ class TournamentPairing(models.Model):
         help_text="Camera ID for Vision AI integration"
     )
 
-    # Timestamps
+    # Datas de Registo
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -433,16 +433,16 @@ class TournamentPairing(models.Model):
 
     @property
     def is_bye(self):
-        """Check if this is a bye pairing"""
+        """Verificar se este é um emparelhamento de bye"""
         return self.bye_player is not None
 
     @property
     def tournament(self):
-        """Get tournament this pairing belongs to"""
+        """Obter o torneio ao qual este emparelhamento pertence"""
         return self.round.tournament
 
     def update_result_from_game(self):
-        """Update pairing result based on associated game result"""
+        """Atualizar o resultado do emparelhamento com base no resultado do jogo associado"""
         if self.game and self.game.result:
             if self.game.result == 'WHITE_WIN':
                 self.result = self.WHITE_WIN
@@ -452,18 +452,18 @@ class TournamentPairing(models.Model):
                 self.result = self.DRAW
             self.save()
 
-            # Update participant scores
+            # Atualizar pontuações dos participantes
             self._update_participant_scores()
 
     def _update_participant_scores(self):
-        """Update tournament participant scores based on result"""
+        """Atualizar as pontuações dos participantes do torneio com base no resultado"""
         if not self.result:
             return
 
         tournament = self.tournament
 
         if self.result == self.BYE and self.bye_player:
-            # Bye gives 1 point
+            # Bye dá 1 ponto
             try:
                 participant = TournamentParticipant.objects.get(
                     tournament=tournament,
@@ -498,7 +498,7 @@ class TournamentPairing(models.Model):
                 pass
 
     def to_dict(self):
-        """Convert pairing to dictionary for API responses"""
+        """Converter emparelhamento para dicionário para respostas da API"""
         return {
             'id': str(self.id),
             'tournament_id': str(self.round.tournament.id),
@@ -517,8 +517,8 @@ class TournamentPairing(models.Model):
             } if self.bye_player else None,
             'is_bye': self.is_bye,
             'board_number': self.board_number,
-            'physical_board_id': self.physical_board_id,  # Vision AI integration
-            'camera_id': self.camera_id,  # Vision AI integration
+            'physical_board_id': self.physical_board_id,  # Integração IA de Visão
+            'camera_id': self.camera_id,  # Integração IA de Visão
             'result': self.result,
             'game_id': str(self.game.id) if self.game else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,

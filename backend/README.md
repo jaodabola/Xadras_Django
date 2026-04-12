@@ -97,7 +97,6 @@ backend/
     ├── game/           # Lógica de jogos e WebSocket consumers
     ├── matchmaking/    # Sistema de emparelhamento
     ├── tournaments/    # Gestão de torneios Swiss
-    ├── cameras/        # Gestão de câmaras e streams
     └── xadras/         # Configurações do projeto
 ```
 

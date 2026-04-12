@@ -22,8 +22,9 @@ class GameSerializer(serializers.ModelSerializer):
     white_player = UserSerializer()
     black_player = UserSerializer()
     moves = MoveSerializer(many=True, read_only=True)
+    move_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Game
         fields = ['id', 'white_player', 'black_player', 'status', 'result',
-                  'game_type', 'time_control', 'created_at', 'updated_at', 'fen_string', 'moves']
+                  'game_type', 'time_control', 'created_at', 'updated_at', 'fen_string', 'moves', 'move_count']

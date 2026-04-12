@@ -1,6 +1,6 @@
-# XADRAS - Tournament Management Logic
-# Implementation by Tournament Logic AI
-# Priority: CRITICAL - Tournament state transitions, round progression, board assignment
+# XADRAS - Lógica de Gestão de Torneios
+# Implementação pela Tournament Logic AI
+# Prioridade: CRÍTICA - Transições de estado do torneio, progressão de rondas, atribuição de tabuleiros
 
 from django.db import transaction, models
 from django.utils import timezone
@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)
 
 class TournamentManager:
     """
-    Central tournament management class
+    Classe central de gestão de torneios
 
-    Responsibilities:
-    - Tournament state transitions
-    - Round progression logic
-    - Pairing generation and game creation
-    - Board assignment integration
-    - Result validation and processing
+    Responsabilidades:
+    - Transições de estado do torneio
+    - Lógica de progressão de rondas
+    - Geração de emparelhamentos e criação de jogos
+    - Integração de atribuição de tabuleiros
+    - Validação e processamento de resultados
     """
 
     def __init__(self, tournament: Tournament):
@@ -37,43 +37,43 @@ class TournamentManager:
 
     def start_tournament(self, started_by: User) -> Dict:
         """
-        Start a tournament
+        Iniciar um torneio
 
         Args:
-            started_by: User starting the tournament (must be organizer)
+            started_by: Utilizador que inicia o torneio (deve ser o organizador)
 
-        Returns:
-            Dictionary with tournament status and first round info
+        Retorna:
+            Dicionário com o estado do torneio e informação da primeira ronda
         """
-        logger.info(f"Starting tournament {self.tournament.name}")
+        logger.info(f"Iniciando o torneio {self.tournament.name}")
 
-        # Validate permissions
+        # Validar permissões
         if self.tournament.created_by != started_by:
             raise PermissionError(
-                "Only tournament organizer can start tournament")
+                "Apenas o organizador do torneio pode iniciar o torneio")
 
-        # Validate tournament state
+        # Validar estado do torneio
         if not self.tournament.can_start:
             raise ValueError(
-                "Tournament cannot be started (check participant count and registration deadline)")
+                "O torneio não pode ser iniciado (verifique o número de participantes e o prazo de inscrição)")
 
         with transaction.atomic():
-            # Update tournament status
+            # Atualizar estado do torneio
             self.tournament.status = Tournament.IN_PROGRESS
             self.tournament.start_date = timezone.now()
 
-            # Calculate total rounds based on format
+            # Calcular total de rondas com base no formato
             self._calculate_total_rounds()
             self.tournament.save()
 
-            # Assign seeds based on initial rating
+            # Atribuir sementes (seeds) com base no rating inicial
             self._assign_seeds()
 
-            # Generate first round
+            # Gerar a primeira ronda
             first_round_result = self.generate_next_round()
 
             logger.info(
-                f"Tournament {self.tournament.name} started successfully")
+                f"Torneio {self.tournament.name} iniciado com sucesso")
 
             return {
                 'tournament_id': str(self.tournament.id),
@@ -85,36 +85,36 @@ class TournamentManager:
 
     def generate_next_round(self) -> Dict:
         """
-        Generate the next round of pairings
+        Gerar a próxima ronda de emparelhamentos
 
-        Returns:
-            Dictionary with round information and pairings
+        Retorna:
+            Dicionário com informações da ronda e emparelhamentos
         """
         if self.tournament.status != Tournament.IN_PROGRESS:
-            raise ValueError("Tournament is not in progress")
+            raise ValueError("O torneio não está em curso")
 
         next_round_number = self.tournament.current_round + 1
 
         logger.info(
-            f"Generating round {next_round_number} for tournament {self.tournament.name}")
+            f"Gerando a ronda {next_round_number} para o torneio {self.tournament.name}")
 
-        # Check if tournament is finished
+        # Verificar se o torneio terminou
         if self._is_tournament_finished():
             return self._finish_tournament()
 
         with transaction.atomic():
-            # Create new round
+            # Criar nova ronda
             tournament_round = TournamentRound.objects.create(
                 tournament=self.tournament,
                 round_number=next_round_number,
                 status=TournamentRound.PENDING
             )
 
-            # Generate pairings based on tournament format
+            # Gerar emparelhamentos com base no formato do torneio
             pairings_data = self._generate_pairings_for_round(
                 next_round_number)
 
-            # Create pairing objects and games
+            # Criar objetos de emparelhamento e jogos
             created_pairings = []
             board_number = 1
 
@@ -129,15 +129,15 @@ class TournamentManager:
                 if not pairing.is_bye:
                     board_number += 1
 
-            # Update tournament current round
+            # Atualizar a ronda atual do torneio
             self.tournament.current_round = next_round_number
             self.tournament.save()
 
-            # Start the round
+            # Iniciar a ronda
             self.start_round(next_round_number)
 
             logger.info(
-                f"Generated round {next_round_number} with {len(created_pairings)} pairings")
+                f"Gerada a ronda {next_round_number} com {len(created_pairings)} emparelhamentos")
 
             return {
                 'round_number': next_round_number,
@@ -149,13 +149,13 @@ class TournamentManager:
 
     def start_round(self, round_number: int) -> Dict:
         """
-        Start a specific round
+        Iniciar uma ronda específica
 
         Args:
-            round_number: The round to start
+            round_number: A ronda a iniciar
 
-        Returns:
-            Dictionary with round status
+        Retorna:
+            Dicionário com o estado da ronda
         """
         try:
             tournament_round = TournamentRound.objects.get(
@@ -163,17 +163,17 @@ class TournamentManager:
                 round_number=round_number
             )
         except TournamentRound.DoesNotExist:
-            raise ValueError(f"Round {round_number} not found")
+            raise ValueError(f"Ronda {round_number} não encontrada")
 
         if tournament_round.status != TournamentRound.PENDING:
-            raise ValueError(f"Round {round_number} is not in pending status")
+            raise ValueError(f"A ronda {round_number} não está em estado pendente")
 
         with transaction.atomic():
             tournament_round.status = TournamentRound.IN_PROGRESS
             tournament_round.start_time = timezone.now()
             tournament_round.save()
 
-            # Start all games in this round
+            # Iniciar todos os jogos nesta ronda
             games_started = 0
             for pairing in tournament_round.pairings.all():
                 if pairing.game:
@@ -181,7 +181,7 @@ class TournamentManager:
                     pairing.game.save()
                     games_started += 1
 
-        logger.info(f"Started round {round_number} with {games_started} games")
+        logger.info(f"Iniciada a ronda {round_number} com {games_started} jogos")
 
         return {
             'round_number': round_number,
@@ -192,32 +192,32 @@ class TournamentManager:
 
     def process_game_result(self, game: Game) -> Dict:
         """
-        Process a completed game result and update tournament standings
+        Processar o resultado de um jogo concluído e atualizar a classificação do torneio
 
         Args:
-            game: The completed game
+            game: O jogo concluído
 
-        Returns:
-            Dictionary with processing results
+        Retorna:
+            Dicionário com os resultados do processamento
         """
-        logger.info(f"Processing game result for game {game.id}")
+        logger.info(f"Processando resultado do jogo {game.id}")
 
         try:
             pairing = TournamentPairing.objects.get(game=game)
         except TournamentPairing.DoesNotExist:
-            raise ValueError(f"No tournament pairing found for game {game.id}")
+            raise ValueError(f"Nenhum emparelhamento de torneio encontrado para o jogo {game.id}")
 
         if pairing.round.tournament != self.tournament:
-            raise ValueError("Game does not belong to this tournament")
+            raise ValueError("O jogo não pertence a este torneio")
 
         with transaction.atomic():
-            # Update pairing result based on game result
+            # Atualizar resultado do emparelhamento com base no resultado do jogo
             pairing.update_result_from_game()
 
-            # Check if round is complete
+            # Verificar se a ronda está concluída
             round_complete = pairing.round.is_complete
 
-            # Update tiebreakers
+            # Atualizar desempates
             update_participant_tiebreakers(str(self.tournament.id))
 
             result = {
@@ -227,7 +227,7 @@ class TournamentManager:
                 'tournament_complete': False
             }
 
-            # If round is complete, check if tournament is finished
+            # Se a ronda estiver concluída, verificar se o torneio terminou
             if round_complete:
                 pairing.round.status = TournamentRound.COMPLETED
                 pairing.round.end_time = timezone.now()
@@ -237,22 +237,22 @@ class TournamentManager:
                     self._finish_tournament()
                     result['tournament_complete'] = True
 
-            logger.info(f"Processed game result: {pairing.result}")
+            logger.info(f"Resultado do jogo processado: {pairing.result}")
             return result
 
     def get_current_standings(self) -> List[Dict]:
-        """Get current tournament standings"""
+        """Obter a classificação atual do torneio"""
         return calculate_tournament_standings(str(self.tournament.id))
 
     def get_round_pairings(self, round_number: int) -> List[Dict]:
         """
-        Get pairings for a specific round
+        Obter emparelhamentos para uma ronda específica
 
         Args:
-            round_number: The round number
+            round_number: O número da ronda
 
-        Returns:
-            List of pairing dictionaries
+        Retorna:
+            Lista de dicionários de emparelhamento
         """
         try:
             tournament_round = TournamentRound.objects.get(
@@ -260,21 +260,21 @@ class TournamentManager:
                 round_number=round_number
             )
         except TournamentRound.DoesNotExist:
-            raise ValueError(f"Round {round_number} not found")
+            raise ValueError(f"Ronda {round_number} não encontrada")
 
         pairings = tournament_round.pairings.all().order_by('board_number')
         return [self._serialize_pairing(p) for p in pairings]
 
     def assign_boards_to_round(self, round_number: int, board_assignments: Dict[str, int]) -> Dict:
         """
-        Assign physical boards to pairings in a round
+        Atribuir tabuleiros físicos a emparelhamentos numa ronda
 
         Args:
-            round_number: The round number
-            board_assignments: Dictionary mapping pairing_id to board_number
+            round_number: O número da ronda
+            board_assignments: Dicionário mapeando pairing_id para board_number
 
-        Returns:
-            Dictionary with assignment results
+        Retorna:
+            Dicionário com os resultados da atribuição
         """
         try:
             tournament_round = TournamentRound.objects.get(
@@ -282,7 +282,7 @@ class TournamentManager:
                 round_number=round_number
             )
         except TournamentRound.DoesNotExist:
-            raise ValueError(f"Round {round_number} not found")
+            raise ValueError(f"Ronda {round_number} não encontrada")
 
         assignments_made = 0
 
@@ -291,7 +291,7 @@ class TournamentManager:
                 try:
                     pairing = tournament_round.pairings.get(id=pairing_id)
                     if not pairing.is_bye:
-                        # Support both old format (just board_number) and new format (dict with Vision AI fields)
+                        # Suporta tanto o formato antigo (apenas board_number) quanto o novo (dicionário com campos de IA de Visão)
                         if isinstance(assignment_data, dict):
                             pairing.physical_board_id = assignment_data.get(
                                 'physical_board_id')
@@ -307,10 +307,10 @@ class TournamentManager:
                         assignments_made += 1
                 except TournamentPairing.DoesNotExist:
                     logger.warning(
-                        f"Pairing {pairing_id} not found for board assignment")
+                        f"Emparelhamento {pairing_id} não encontrado para atribuição de tabuleiro")
 
         logger.info(
-            f"Assigned {assignments_made} boards for round {round_number}")
+            f"Atribuídos {assignments_made} tabuleiros para a ronda {round_number}")
 
         return {
             'round_number': round_number,
@@ -319,7 +319,7 @@ class TournamentManager:
         }
 
     def _calculate_total_rounds(self):
-        """Calculate total rounds based on tournament format and participants"""
+        """Calcular o total de rondas com base no formato do torneio e participantes"""
         participant_count = self.tournament.participant_count
 
         if self.tournament.tournament_type == Tournament.SWISS:
@@ -338,7 +338,7 @@ class TournamentManager:
                 1 if participant_count % 2 == 0 else participant_count
 
     def _assign_seeds(self):
-        """Assign seeds to participants based on initial rating"""
+        """Atribuir sementes (seeds) aos participantes com base no rating inicial"""
         participants = self.tournament.participants.filter(
             is_active=True).order_by('-initial_rating')
 
@@ -347,7 +347,7 @@ class TournamentManager:
             participant.save(update_fields=['seed'])
 
     def _generate_pairings_for_round(self, round_number: int) -> List[Dict]:
-        """Generate pairings based on tournament format"""
+        """Gerar emparelhamentos com base no formato do torneio"""
         tournament_id = str(self.tournament.id)
 
         if self.tournament.tournament_type == Tournament.SWISS:
@@ -355,15 +355,15 @@ class TournamentManager:
         elif self.tournament.tournament_type == Tournament.SINGLE_ELIMINATION:
             return generate_elimination_pairings(tournament_id, round_number)
         elif self.tournament.tournament_type == Tournament.ROUND_ROBIN:
-            # For round robin, we need to get the specific round from all rounds
+            # Para round robin, precisamos de obter a ronda específica de todas as rondas
             all_rounds = generate_round_robin_pairings(tournament_id)
             return all_rounds.get(round_number, [])
         else:
             raise ValueError(
-                f"Unsupported tournament format: {self.tournament.tournament_type}")
+                f"Formato de torneio não suportado: {self.tournament.tournament_type}")
 
     def _create_pairing_from_data(self, tournament_round: TournamentRound, pairing_data: Dict, board_number: int) -> TournamentPairing:
-        """Create a TournamentPairing object from pairing data"""
+        """Criar um objeto TournamentPairing a partir dos dados do emparelhamento"""
         pairing = TournamentPairing.objects.create(
             round=tournament_round,
             white_player=pairing_data.get('white_player'),
@@ -373,7 +373,7 @@ class TournamentManager:
                 'is_bye') else None
         )
 
-        # Create game if not a bye
+        # Criar jogo se não for um bye
         if not pairing_data.get('is_bye'):
             game = Game.objects.create(
                 white_player=pairing_data['white_player'],
@@ -383,7 +383,7 @@ class TournamentManager:
             pairing.game = game
             pairing.save()
         else:
-            # Process bye immediately
+            # Processar bye imediatamente
             pairing.result = TournamentPairing.BYE
             pairing.save()
             pairing._update_participant_scores()
@@ -391,31 +391,31 @@ class TournamentManager:
         return pairing
 
     def _is_tournament_finished(self) -> bool:
-        """Check if tournament should be finished"""
+        """Verificar se o torneio deve terminar"""
         if self.tournament.tournament_type == Tournament.SINGLE_ELIMINATION:
-            # Tournament is finished when only one player remains
+            # O torneio termina quando resta apenas um jogador
             active_participants = self.tournament.participants.filter(
                 is_active=True).count()
             return active_participants <= 1
         elif self.tournament.tournament_type in [Tournament.SWISS, Tournament.ROUND_ROBIN]:
-            # Tournament is finished when all planned rounds are complete
+            # O torneio termina quando todas as rondas planeadas estiverem concluídas
             return self.tournament.current_round >= self.tournament.total_rounds
 
         return False
 
     def _finish_tournament(self) -> Dict:
-        """Finish the tournament and determine final standings"""
-        logger.info(f"Finishing tournament {self.tournament.name}")
+        """Terminar o torneio e determinar a classificação final"""
+        logger.info(f"Terminando o torneio {self.tournament.name}")
 
         with transaction.atomic():
             self.tournament.status = Tournament.FINISHED
             self.tournament.end_time = timezone.now()
             self.tournament.save()
 
-            # Calculate final standings
+            # Calcular classificação final
             final_standings = self.get_current_standings()
 
-            logger.info(f"Tournament {self.tournament.name} finished")
+            logger.info(f"Torneio {self.tournament.name} terminado")
 
             return {
                 'tournament_finished': True,
@@ -424,22 +424,22 @@ class TournamentManager:
             }
 
     def _serialize_pairing(self, pairing: TournamentPairing) -> Dict:
-        """Serialize a pairing object to dictionary"""
+        """Serializar um objeto de emparelhamento para dicionário"""
         return pairing.to_dict()
 
 
-# Utility functions for external use
+# Funções utilitárias para uso externo
 
 def start_tournament(tournament_id: str, started_by_user_id: int) -> Dict:
     """
-    Start a tournament
+    Iniciar um torneio
 
     Args:
-        tournament_id: UUID of the tournament
-        started_by_user_id: ID of user starting the tournament
+        tournament_id: UUID do torneio
+        started_by_user_id: ID do utilizador que inicia o torneio
 
-    Returns:
-        Dictionary with tournament start results
+    Retorna:
+        Dicionário com os resultados do início do torneio
     """
     try:
         tournament = Tournament.objects.get(id=tournament_id)
@@ -449,20 +449,20 @@ def start_tournament(tournament_id: str, started_by_user_id: int) -> Dict:
         return manager.start_tournament(user)
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")
     except User.DoesNotExist:
-        raise ValueError(f"User with ID {started_by_user_id} not found")
+        raise ValueError(f"Utilizador com ID {started_by_user_id} não encontrado")
 
 
 def generate_tournament_round(tournament_id: str) -> Dict:
     """
-    Generate next round for a tournament
+    Gerar a próxima ronda para um torneio
 
     Args:
-        tournament_id: UUID of the tournament
+        tournament_id: UUID do torneio
 
-    Returns:
-        Dictionary with round generation results
+    Retorna:
+        Dicionário com os resultados da geração da ronda
     """
     try:
         tournament = Tournament.objects.get(id=tournament_id)
@@ -470,23 +470,23 @@ def generate_tournament_round(tournament_id: str) -> Dict:
         return manager.generate_next_round()
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")
 
 
 def process_tournament_game_result(game_id: int) -> Dict:
     """
-    Process a completed game result for tournament
+    Processar o resultado de um jogo concluído para o torneio
 
     Args:
-        game_id: ID of the completed game
+        game_id: ID do jogo concluído
 
-    Returns:
-        Dictionary with processing results
+    Retorna:
+        Dicionário com os resultados do processamento
     """
     try:
         game = Game.objects.get(id=game_id)
 
-        # Find tournament pairing for this game
+        # Encontrar o emparelhamento de torneio para este jogo
         pairing = TournamentPairing.objects.get(game=game)
         tournament = pairing.round.tournament
 
@@ -494,20 +494,20 @@ def process_tournament_game_result(game_id: int) -> Dict:
         return manager.process_game_result(game)
 
     except Game.DoesNotExist:
-        raise ValueError(f"Game with ID {game_id} not found")
+        raise ValueError(f"Jogo com ID {game_id} não encontrado")
     except TournamentPairing.DoesNotExist:
-        raise ValueError(f"No tournament pairing found for game {game_id}")
+        raise ValueError(f"Nenhum emparelhamento de torneio encontrado para o jogo {game_id}")
 
 
 def get_tournament_standings(tournament_id: str) -> List[Dict]:
     """
-    Get current standings for a tournament
+    Obter a classificação atual para um torneio
 
     Args:
-        tournament_id: UUID of the tournament
+        tournament_id: UUID do torneio
 
-    Returns:
-        List of standings dictionaries
+    Retorna:
+        Lista de dicionários de classificação
     """
     try:
         tournament = Tournament.objects.get(id=tournament_id)
@@ -515,4 +515,4 @@ def get_tournament_standings(tournament_id: str) -> List[Dict]:
         return manager.get_current_standings()
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")

@@ -92,17 +92,8 @@ class UserStatsView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
 
-        win_rate = (
-            round((user.games_won / user.games_played) * 100, 2)
-            if user.games_played > 0
-            else 0
-        )
-
-        draw_rate = (
-            round((user.games_drawn / user.games_played) * 100, 2)
-            if user.games_played > 0
-            else 0
-        )
+        win_rate = user.get_win_rate()
+        draw_rate = user.get_draw_rate()
 
         return Response(
             {

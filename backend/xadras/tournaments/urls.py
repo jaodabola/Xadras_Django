@@ -1,11 +1,11 @@
-# XADRAS - Tournament URLs
-# URL routing for tournament endpoints
+# XADRAS - URLs de Torneio
+# Roteamento de URLs para os endpoints de torneio
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import TournamentViewSet, TournamentJoinByCodeView
 
-# Create router for tournament endpoints
+# Criar router para os endpoints de torneio
 router = DefaultRouter()
 router.register(r'tournaments', TournamentViewSet, basename='tournament')
 router.register(r'join', TournamentJoinByCodeView, basename='tournament-join')

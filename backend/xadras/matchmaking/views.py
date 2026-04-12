@@ -146,10 +146,18 @@ class MatchmakingView(APIView):
         user1 = player1.user
         user2 = player2.user
 
-        color = random.choice(["WHITE", "BLACK"])
-
-        white = user1 if color == "WHITE" else user2
-        black = user2 if color == "WHITE" else user1
+        # Determinar as cores respeitando as preferências validadas no find_opponent
+        if player1.preferred_color == "WHITE" or player2.preferred_color == "BLACK":
+            white = user1
+            black = user2
+        elif player1.preferred_color == "BLACK" or player2.preferred_color == "WHITE":
+            white = user2
+            black = user1
+        else:
+            # Ambos declararam ANY
+            color = random.choice(["WHITE", "BLACK"])
+            white = user1 if color == "WHITE" else user2
+            black = user2 if color == "WHITE" else user1
 
         game = Game.objects.create(
             white_player=white,

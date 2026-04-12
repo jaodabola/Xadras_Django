@@ -1,6 +1,6 @@
-# XADRAS - Tournament Standings Calculator
-# Implementation by Tournament Logic AI
-# Priority: CRITICAL - Tiebreakers (Buchholz, Sonneborn-Berger, Direct Encounter)
+# XADRAS - Calculadora de Classificação de Torneios
+# Implementação pela Tournament Logic AI
+# Prioridade: CRÍTICA - Desempates (Buchholz, Sonneborn-Berger, Confronto Direto)
 
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 class TournamentStandingsCalculator:
     """
-    Calculate tournament standings with comprehensive tiebreaker system
+    Calcular a classificação do torneio com um sistema abrangente de desempates
 
-    Tiebreakers implemented:
-    1. Buchholz Score (sum of opponents' scores)
-    2. Sonneborn-Berger Score (sum of defeated opponents' scores + half of drawn opponents' scores)
-    3. Direct Encounter (head-to-head results between tied players)
-    4. Number of wins
-    5. Initial rating (highest breaks tie)
+    Critérios implementados:
+    1. Buchholz Score (soma das pontuações dos adversários)
+    2. Sonneborn-Berger Score (soma das pontuações dos adversários derrotados + metade dos adversários com quem empatou)
+    3. Confronto Direto (resultados cabeça-a-cabeça entre tied players)
+    4. Número de vitórias
+    5. Rating inicial (mais alto vence o empate)
     """
 
     def __init__(self, tournament: Tournament):
@@ -36,19 +36,19 @@ class TournamentStandingsCalculator:
             ).select_related('white_player', 'black_player', 'bye_player')
         )
 
-        # Cache for performance
+        # Cache para performance
         self._opponent_cache = {}
         self._result_cache = {}
 
     def calculate_standings(self) -> List[Dict]:
         """
-        Calculate complete tournament standings with all tiebreakers
+        Calcular a classificação completa do torneio com todos os desempates
 
-        Returns:
-            List of participant standings ordered by rank
+        Retorna:
+            Lista da classificação dos participantes ordenada por posição
         """
         logger.info(
-            f"Calculating standings for tournament {self.tournament.name}")
+            f"Calculando classificação para o torneio {self.tournament.name}")
 
         standings = []
 
@@ -56,35 +56,35 @@ class TournamentStandingsCalculator:
             standing = self._calculate_participant_standing(participant)
             standings.append(standing)
 
-        # Sort by all tiebreaker criteria
+        # Ordenar por todos os critérios de desempate
         standings.sort(key=lambda x: (
-            -x['score'],                    # Primary: highest score
-            -x['buchholz_score'],          # 1st tiebreaker: Buchholz
-            -x['sonneborn_berger_score'],  # 2nd tiebreaker: Sonneborn-Berger
-            -x['direct_encounter_score'],   # 3rd tiebreaker: Direct encounter
-            -x['wins'],                     # 4th tiebreaker: Most wins
-            # 5th tiebreaker: Highest initial rating
+            -x['score'],                    # Primário: pontuação mais alta
+            -x['buchholz_score'],          # 1º desempate: Buchholz
+            -x['sonneborn_berger_score'],  # 2º desempate: Sonneborn-Berger
+            -x['direct_encounter_score'],   # 3º desempate: Confronto direto
+            -x['wins'],                     # 4º desempate: Mais vitórias
+            # 5º desempate: Rating inicial mais alto
             -x['initial_rating']
         ))
 
-        # Assign positions
+        # Atribuir posições
         for i, standing in enumerate(standings, 1):
             standing['position'] = i
 
-        # Update participant tiebreak scores in database
+        # Atualizar pontuações de desempate dos participantes na base de dados
         self._update_tiebreak_scores(standings)
 
-        logger.info(f"Calculated standings for {len(standings)} participants")
+        logger.info(f"Classificação calculada para {len(standings)} participantes")
         return standings
 
     def _calculate_participant_standing(self, participant: TournamentParticipant) -> Dict:
-        """Calculate complete standing information for a participant"""
+        """Calcular a informação completa da classificação para um participante"""
         user = participant.user
 
-        # Get basic game statistics
+        # Obter estatísticas básicas de jogo
         games_played, wins, draws, losses = self._get_game_statistics(user)
 
-        # Calculate tiebreaker scores
+        # Calcular pontuações de desempate
         buchholz_score = self._calculate_buchholz_score(user)
         sonneborn_berger_score = self._calculate_sonneborn_berger_score(user)
         direct_encounter_score = self._calculate_direct_encounter_score(user)
@@ -103,15 +103,15 @@ class TournamentStandingsCalculator:
             'direct_encounter_score': direct_encounter_score,
             'initial_rating': participant.initial_rating,
             'seed': participant.seed,
-            'position': 0  # Will be set after sorting
+            'position': 0  # Será definido após a ordenação
         }
 
     def _get_game_statistics(self, user: User) -> Tuple[int, int, int, int]:
         """
-        Get basic game statistics for a user
+        Obter estatísticas básicas de jogo para um utilizador
 
-        Returns:
-            Tuple of (games_played, wins, draws, losses)
+        Retorna:
+            Tuplo de (jogos_jogados, vitórias, empates, derrotas)
         """
         if user.id in self._result_cache:
             return self._result_cache[user.id]
@@ -120,7 +120,7 @@ class TournamentStandingsCalculator:
 
         for pairing in self.pairings:
             if pairing.bye_player == user:
-                # Bye counts as a win
+                # Bye conta como uma vitória
                 wins += 1
             elif pairing.white_player == user:
                 if pairing.result == TournamentPairing.WHITE_WIN:
@@ -145,10 +145,10 @@ class TournamentStandingsCalculator:
 
     def _calculate_buchholz_score(self, user: User) -> float:
         """
-        Calculate Buchholz score (sum of opponents' scores)
+        Calcular a pontuação Buchholz (soma das pontuações dos adversários)
 
-        The Buchholz score is the sum of the scores of all opponents
-        a player has faced in the tournament.
+        A pontuação Buchholz é a soma das pontuações de todos os adversários
+        que um jogador enfrentou no torneio.
         """
         opponents = self._get_opponents(user)
         buchholz_score = 0.0
@@ -162,19 +162,19 @@ class TournamentStandingsCalculator:
                 )
                 buchholz_score += opponent_participant.score
             except TournamentParticipant.DoesNotExist:
-                # Opponent not found (shouldn't happen), skip
+                # Adversário não encontrado (não deve acontecer), saltar
                 continue
 
         return buchholz_score
 
     def _calculate_sonneborn_berger_score(self, user: User) -> float:
         """
-        Calculate Sonneborn-Berger score
+        Calcular a pontuação Sonneborn-Berger
 
-        The Sonneborn-Berger score is the sum of:
-        - Full scores of defeated opponents
-        - Half scores of drawn opponents
-        - Zero for opponents who defeated this player
+        A pontuação Sonneborn-Berger é a soma de:
+        - Pontuações totais de adversários derrotados
+        - Metade das pontuações de adversários com quem empatou
+        - Zero para adversários que derrotaram este jogador
         """
         sonneborn_berger_score = 0.0
 
@@ -183,7 +183,7 @@ class TournamentStandingsCalculator:
             result_for_user = None
 
             if pairing.bye_player == user:
-                # Bye doesn't contribute to Sonneborn-Berger
+                # O bye não contribui para o Sonneborn-Berger
                 continue
             elif pairing.white_player == user:
                 opponent = pairing.black_player
@@ -211,12 +211,12 @@ class TournamentStandingsCalculator:
                     )
 
                     if result_for_user == 'win':
-                        # Add full score of defeated opponent
+                        # Adicionar pontuação total do adversário derrotado
                         sonneborn_berger_score += opponent_participant.score
                     elif result_for_user == 'draw':
-                        # Add half score of drawn opponent
+                        # Adicionar metade da pontuação do adversário com quem empatou
                         sonneborn_berger_score += opponent_participant.score * 0.5
-                    # For losses, add nothing
+                    # Para derrotas, não adiciona nada
 
                 except TournamentParticipant.DoesNotExist:
                     continue
@@ -225,20 +225,20 @@ class TournamentStandingsCalculator:
 
     def _calculate_direct_encounter_score(self, user: User) -> float:
         """
-        Calculate direct encounter score
+        Calcular a pontuação de confronto direto
 
-        This is used when comparing players with the same score.
-        Returns the score achieved in games directly between tied players.
+        Isto é usado ao comparar jogadores com a mesma pontuação.
+        Retorna a pontuação alcançada em jogos diretamente entre jogadores empatados.
 
-        Note: This is a simplified version. Full implementation would
-        require knowing which specific players are tied.
+        Nota: Esta é uma versão simplificada. A implementação completa exigiria 
+        saber quais os jogadores específicos que estão empatados.
         """
-        # For now, return 0. This would be calculated when resolving
-        # ties between specific players
+        # Por agora, retorna 0. Isto seria calculado ao resolver
+        # empates entre jogadores específicos
         return 0.0
 
     def _get_opponents(self, user: User) -> List[User]:
-        """Get list of all opponents a user has faced"""
+        """Obter lista de todos os adversários que um utilizador enfrentou"""
         if user.id in self._opponent_cache:
             return self._opponent_cache[user.id]
 
@@ -246,7 +246,7 @@ class TournamentStandingsCalculator:
 
         for pairing in self.pairings:
             if pairing.bye_player == user:
-                # Bye has no opponent
+                # O bye não tem adversário
                 continue
             elif pairing.white_player == user and pairing.black_player:
                 opponents.append(pairing.black_player)
@@ -257,7 +257,7 @@ class TournamentStandingsCalculator:
         return opponents
 
     def _update_tiebreak_scores(self, standings: List[Dict]):
-        """Update tiebreak scores in the database"""
+        """Atualizar as pontuações de desempate na base de dados"""
         for standing in standings:
             try:
                 participant = TournamentParticipant.objects.get(
@@ -273,22 +273,22 @@ class TournamentStandingsCalculator:
 
             except TournamentParticipant.DoesNotExist:
                 logger.warning(
-                    f"Participant {standing['participant_id']} not found for tiebreak update")
+                    f"Participante {standing['participant_id']} não encontrado para atualização de desempate")
 
     def calculate_direct_encounter_between_players(self, players: List[User]) -> Dict[int, float]:
         """
-        Calculate direct encounter scores between specific tied players
+        Calcular as pontuações de confronto direto entre jogadores específicos empatados
 
         Args:
-            players: List of tied players to compare
+            players: Lista de jogadores empatados para comparar
 
         Returns:
-            Dictionary mapping user_id to direct encounter score
+            Dicionário mapeando user_id para a pontuação de confronto direto
         """
         player_ids = {player.id for player in players}
         direct_scores = {player.id: 0.0 for player in players}
 
-        # Find all pairings between these specific players
+        # Encontrar todos os emparelhamentos entre estes jogadores específicos
         for pairing in self.pairings:
             if (pairing.white_player and pairing.black_player and
                 pairing.white_player.id in player_ids and
@@ -307,13 +307,13 @@ class TournamentStandingsCalculator:
 
 def calculate_tournament_standings(tournament_id: str) -> List[Dict]:
     """
-    Main function to calculate tournament standings
+    Função principal para calcular a classificação do torneio
 
     Args:
-        tournament_id: UUID of the tournament
+        tournament_id: UUID do torneio
 
     Returns:
-        List of standings dictionaries ordered by rank
+        Lista de dicionários de classificação ordenada por posição
     """
     try:
         tournament = Tournament.objects.get(id=tournament_id)
@@ -321,25 +321,25 @@ def calculate_tournament_standings(tournament_id: str) -> List[Dict]:
         return calculator.calculate_standings()
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")
 
 
 def update_participant_tiebreakers(tournament_id: str):
     """
-    Update tiebreaker scores for all participants in a tournament
+    Atualizar as pontuações de desempate para todos os participantes num torneio
 
     Args:
-        tournament_id: UUID of the tournament
+        tournament_id: UUID do torneio
     """
     try:
         tournament = Tournament.objects.get(id=tournament_id)
         calculator = TournamentStandingsCalculator(tournament)
 
-        # Calculate standings (this also updates tiebreakers)
+        # Calcular classificação (isto também atualiza os desempates)
         calculator.calculate_standings()
 
         logger.info(
-            f"Updated tiebreaker scores for tournament {tournament.name}")
+            f"Atualizadas pontuações de desempate para o torneio {tournament.name}")
 
     except Tournament.DoesNotExist:
-        raise ValueError(f"Tournament with ID {tournament_id} not found")
+        raise ValueError(f"Torneio com ID {tournament_id} não encontrado")

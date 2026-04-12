@@ -1,214 +1,134 @@
-# XADRAS Backend - API REST
+# ♟️ XADRAS Backend - API REST
 
-API REST para a plataforma de xadrez XADRAS, construída com Django, Django REST Framework e WebSockets para jogabilidade em tempo real.
+## 🎯 Funcionalidades Principais
 
-## 🎯 Funcionalidades
+*   🔐 **Autenticação Premium** - Registo, login e gestão segura de sessões via JWT/Djoser.
+*   ⚔️ **Jogos em Tempo Real** - Sincronização de baixa latência através de WebSockets (Django Channels).
+*   🤝 **Matchmaking Inteligente** - Fila de espera dinâmica com emparelhamento baseado no rating ELO.
+*   🏆 **Gestão de Torneios** - Suporte completo a sistemas **Swiss**, **Round Robin** e **Eliminação Única**.
+*   📸 **Xadras Vision Integration** - Endpoint dedicado para receber estados de tabuleiros físicos detetados por telemóvel.
+*   👤 **Sistema de Convidados** - Permite a entrada imediata de jogadores sem necessidade de registo inicial.
 
-* **Autenticação** - Registo, login e gestão de tokens (Djoser)
-* **Jogos em Tempo Real** - WebSockets para sincronização de jogadas
-* **Sistema de Matchmaking** - Emparelhamento automático baseado em ELO
-* **Torneios** - Sistema Swiss com classificações e emparelhamentos
-* **Visão AI** - Integração com câmaras para deteção de tabuleiros físicos
-* **Modo Convidado** - Jogadores não registados podem jogar
+---
 
-## 📋 Requisitos
+## 📋 Requisitos do Sistema
 
-* Python 3.10+
-* PostgreSQL 14+
-* Redis 6+
-* Docker & Docker Compose (recomendado)
+*   **Linguagem**: Python 3.11+
+*   **Base de Dados**: 
+    *   **Desenvolvimento**: SQLite 3 (configurado por defeito)
+    *   **Produção**: PostgreSQL 14+ (recomendado)
+*   **Cache & Mensagens**: Redis 6+ (Obrigatório para WebSockets e Rate Limiting)
+*   **Infraestrutura**: Docker & Docker Compose (Recomendado para deploy)
+
+---
 
 ## 🐳 Início Rápido com Docker
 
-### 1. Clonar e Configurar
-
 ```bash
+# 1. Clonar o repositório
 git clone https://github.com/jaodabola/Xadras.git
 cd Xadras
-```
 
-### 2. Criar Ficheiro de Ambiente
-
-```bash
+# 2. Configurar variáveis de ambiente
 cp .env.example .env
-# Editar .env com as tuas configurações
-```
 
-### 3. Executar com Docker Compose
-
-```bash
-# Iniciar todos os serviços
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f backend
-
-# Parar serviços
-docker-compose down
+# 3. Levantar a infraestrutura
+docker-compose up -d --build
 ```
 
 A API estará disponível em: `http://localhost:8000`
 
-## 💻 Desenvolvimento Local (Sem Docker)
+---
 
-### 1. Ambiente Virtual
+## 💻 Configuração Local (Desenvolvimento)
 
+### 1. Preparação do Ambiente
 ```bash
 cd backend/xadras
-
-# Linux/MacOS
 python -m venv venv
-source venv/bin/activate
 
-# Windows
-python -m venv venv
+# Ativar ambiente (Windows)
 .\venv\Scripts\activate
+# Ativar ambiente (Linux/MacOS)
+source venv/bin/activate
 ```
 
-### 2. Instalar Dependências
-
+### 2. Instalação e Migração
 ```bash
 pip install -r requirements.txt
-```
-
-### 3. Configurar Base de Dados
-
-```bash
 python manage.py migrate
-python manage.py createsuperuser  # Opcional
+python manage.py createsuperuser
 ```
 
-### 4. Iniciar Servidores
-
+### 3. Execução
 ```bash
-# Terminal 1 - Django
-python manage.py runserver
+# Iniciar servidor de desenvolvimento (Daphne/Django)
+python manage.py runserver 0.0.0.0:8000
+```
+*Nota: Certifique-se de que o **Redis** está a correr localmente para suportar WebSockets.*
 
-# Terminal 2 - Redis (necessário para WebSockets)
-redis-server
+---
+
+## 📁 Arquitetura do Projeto
+
+```text
+backend/xadras/
+├── accounts/       # Gestão de utilizadores, ratings ELO e perfis
+├── game/           # Core: Lógica de jogo, movimentos e Transmissão FEN
+├── matchmaking/    # Algoritmos de fila e emparelhamento asíncrono
+├── tournaments/    # Engine de torneios (Swiss, Standings, Pairing)
+└── xadras/         # Configurações globais, Middleware e ASGI
 ```
 
-## 📁 Estrutura do Projeto
+---
 
-```
-backend/
-└── xadras/
-    ├── accounts/       # Gestão de utilizadores e autenticação
-    ├── game/           # Lógica de jogos e WebSocket consumers
-    ├── matchmaking/    # Sistema de emparelhamento
-    ├── tournaments/    # Gestão de torneios Swiss
-    └── xadras/         # Configurações do projeto
-```
+## 📡 Visão Geral da API
 
-## 📡 Endpoints da API
+### Principais Endpoints
 
-### Autenticação
+| Área | Método | Endpoint | Descrição |
+| :--- | :--- | :--- | :--- |
+| **Auth** | `POST` | `/api/token/login/` | Obtenção de Token |
+| **Accounts** | `POST` | `/api/accounts/guest/` | Criação de utilizador temporário |
+| **Game** | `POST` | `/api/game/live-board/fen/` | **Xadras Vision**: Envio de FEN via Mobile |
+| **Matchmaking** | `POST` | `/api/matchmaking/` | Entrada/Saída da fila de espera |
+| **Tournaments** | `GET` | `/api/tournaments/` | Listagem e gestão de torneios |
 
-| Método | Endpoint             | Descrição           |
-| ------ | -------------------- | ------------------- |
-| `POST` | `/api/users/`        | Registar utilizador |
-| `POST` | `/api/token/login/`  | Obter token         |
-| `POST` | `/api/token/logout/` | Invalidar token     |
-| `GET`  | `/api/users/me/`     | Utilizador atual    |
+> [!TIP]
+> A documentação completa e interativa dos endpoints pode ser encontrada via **Swagger/OpenAPI** em `/api/docs/` (se habilitado) ou no ficheiro [openapi.yaml](../openapi.yaml).
 
-### Contas
+---
 
-| Método | Endpoint                 | Descrição             |
-| ------ | ------------------------ | --------------------- |
-| `POST` | `/api/accounts/guest/`   | Criar conta convidado |
-| `GET`  | `/api/accounts/profile/` | Perfil do utilizador  |
-| `GET`  | `/api/accounts/stats/`   | Estatísticas          |
+## 🔌 Protocolo WebSocket
 
-### Jogos
+A comunicação em tempo real é feita através do path:
+`ws://<host>/ws/game/<game_id>/?token=<auth_token>`
 
-| Método | Endpoint               | Descrição      |
-| ------ | ---------------------- | -------------- |
-| `GET`  | `/api/game/`           | Listar jogos   |
-| `POST` | `/api/game/`           | Criar jogo     |
-| `POST` | `/api/game/{id}/join/` | Entrar no jogo |
-| `POST` | `/api/game/{id}/move/` | Fazer jogada   |
-| `POST` | `/api/game/{id}/end/`  | Terminar jogo  |
-
-### Matchmaking
-
-| Método | Endpoint                  | Descrição      |
-| ------ | ------------------------- | -------------- |
-| `POST` | `/api/matchmaking/join/`  | Entrar na fila |
-| `POST` | `/api/matchmaking/leave/` | Sair da fila   |
-| `GET`  | `/api/matchmaking/`       | Estado da fila |
-
-### Torneios
-
-| Método | Endpoint                           | Descrição       |
-| ------ | ---------------------------------- | --------------- |
-| `GET`  | `/api/tournaments/`                | Listar torneios |
-| `POST` | `/api/tournaments/`                | Criar torneio   |
-| `POST` | `/api/tournaments/{id}/join/`      | Inscrever-se    |
-| `POST` | `/api/tournaments/{id}/start/`     | Iniciar torneio |
-| `GET`  | `/api/tournaments/{id}/standings/` | Classificação   |
-
-## 🔌 WebSocket
-
-```javascript
-// Conectar ao jogo
-const ws = new WebSocket('ws://localhost:8000/ws/game/<game_id>/?token=<auth_token>');
-
-// Eventos recebidos
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  
-  switch(data.type) {
-    case 'move':
-      console.log('Jogada:', data.move_san);
-      break;
-    case 'board_update':
-      console.log('FEN:', data.fen);
-      break;
-    case 'game_end':
-      console.log('Resultado:', data.result);
-      break;
-  }
-};
-
-// Enviar jogada
-ws.send(JSON.stringify({
-  type: 'move',
-  move_san: 'e4',
-  fen_after: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
-}));
+**Exemplo de Mensagem de Jogada (Send):**
+```json
+{
+  "type": "move",
+  "move_san": "Nf3",
+  "fen_after": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1"
+}
 ```
 
-## 🔧 Variáveis de Ambiente
+---
 
-```env
-# Django
-SECRET_KEY=chave-secreta-segura
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+## 🧪 Qualidade de Código
 
-# Base de Dados
-DATABASE_URL=postgres://user:password@localhost:5432/xadras
-
-# Redis
-REDIS_URL=redis://localhost:6379/0
-
-# CORS
-CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-## 🧪 Testes
-
+Para garantir a integridade do sistema, execute a suite de testes:
 ```bash
-# Executar todos os testes
 python manage.py test
-
-# Com cobertura
-coverage run manage.py test
-coverage report
 ```
 
-## 📚 Documentação
+---
 
-* [OpenAPI Spec](../openapi.yaml) - Especificação completa da API
-* [GitBook Documentação](https://app.gitbook.com/o/1ePv0zfiw298i7k4f0YD/s/Wff56F3jruJVj0mZxpM7/) - Documentação interativa
+## 📚 Documentação Adicional
 
+*   [Guia de Arquitetura Superior](../DOCS_ARCHITECTURE.md)
+*   [Especificação OpenAPI](../openapi.yaml)
+*   [Portal GitBook](https://app.gitbook.com/o/1ePv0zfiw298i7k4f0YD/s/Wff56F3jruJVj0mZxpM7/)
+
+---
+*XADRAS - Transforming Chess with AI Vision. 2026.*

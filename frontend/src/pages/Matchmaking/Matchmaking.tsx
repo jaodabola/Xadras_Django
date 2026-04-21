@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMatchmaking } from '../../contexts/MatchmakingContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { IconBolt, IconClock, IconTrophy, IconStar, IconPlay, IconLock, IconAlert, IconArrowRight, IconGrid } from '../../components/Icons/Icons';
 import './Matchmaking.css';
 
-/* ─── Time control options (design1 pattern) ─── */
+/* ─── Time control options ─── */
 const TIME_CONTROLS = [
-  { id: 'bullet', label: 'Bullet', time: '1 min', icon: '⚡', description: 'Ritmo rápido, um minuto por jogador' },
-  { id: 'blitz', label: 'Blitz', time: '5 min', icon: '⏱', description: 'Jogos rápidos, cinco minutos cada' },
-  { id: 'rapid', label: 'Rápido', time: '10 min', icon: '🕐', description: 'Ritmo padrão, dez minutos por lado' },
-  { id: 'classical', label: 'Clássico', time: '30 min', icon: '♟', description: 'Tempo tradicional para jogo profundo' },
-  { id: 'unlimited', label: 'Sem Tempo', time: '∞', icon: '♾️', description: 'Jogar sem limite de tempo' },
+  { id: 'bullet', label: 'Bullet', time: '1 min', icon: <IconBolt size={18} />, description: 'Ritmo rápido, um minuto por jogador' },
+  { id: 'blitz', label: 'Blitz', time: '5 min', icon: <IconClock size={18} />, description: 'Jogos rápidos, cinco minutos cada' },
+  { id: 'rapid', label: 'Rápido', time: '10 min', icon: <IconClock size={18} />, description: 'Ritmo padrão, dez minutos por lado' },
+  { id: 'classical', label: 'Clássico', time: '30 min', icon: <IconClock size={18} />, description: 'Tempo tradicional para jogo profundo' },
+  { id: 'unlimited', label: 'Sem Tempo', time: '∞', icon: <IconGrid size={18} />, description: 'Jogar sem limite de tempo' },
 ] as const;
 
 type TimeControlId = typeof TIME_CONTROLS[number]['id'];
@@ -73,7 +74,7 @@ const Matchmaking: React.FC = () => {
     return (
       <div className="matchmaking-container">
         <div className="matchmaking-card not-logged-in">
-          <div className="lock-icon">🔒</div>
+          <div className="lock-icon"><IconLock size={48} /></div>
           <h2>Autenticação necessária</h2>
           <p>Inicie sessão para encontrar adversários e jogar xadrez online.</p>
           <button className="login-button" onClick={() => navigate('/login')}>
@@ -98,7 +99,7 @@ const Matchmaking: React.FC = () => {
 
         {error && (
           <div className="error-message">
-            <span className="error-icon">⚠</span>
+            <span className="error-icon"><IconAlert size={16} /></span>
             {error}
           </div>
         )}
@@ -172,7 +173,7 @@ const Matchmaking: React.FC = () => {
                   className={`color-option${preferredColor === 'WHITE' ? ' active' : ''}`}
                   onClick={() => setPreferredColor('WHITE')}
                 >
-                  <span className="piece-icon white-piece">♔</span>
+                  <img src="/pieces/wK.svg" alt="Brancas" className="piece-icon-img" />
                   <span className="color-label">Brancas</span>
                 </button>
                 <button
@@ -180,7 +181,7 @@ const Matchmaking: React.FC = () => {
                   className={`color-option${preferredColor === 'BLACK' ? ' active' : ''}`}
                   onClick={() => setPreferredColor('BLACK')}
                 >
-                  <span className="piece-icon black-piece">♚</span>
+                  <img src="/pieces/bK.svg" alt="Pretas" className="piece-icon-img" />
                   <span className="color-label">Pretas</span>
                 </button>
                 <button
@@ -188,7 +189,7 @@ const Matchmaking: React.FC = () => {
                   className={`color-option${preferredColor === 'ANY' ? ' active' : ''}`}
                   onClick={() => setPreferredColor('ANY')}
                 >
-                  <span className="piece-icon random-piece">⚡</span>
+                  <span className="piece-icon random-piece"><IconGrid size={24} /></span>
                   <span className="color-label">Aleatório</span>
                 </button>
               </div>
@@ -202,23 +203,23 @@ const Matchmaking: React.FC = () => {
               <span className="button-text">
                 {selectedTimeControl ? 'Encontrar Jogo' : 'Selecione o Ritmo'}
               </span>
-              <span className="button-icon">→</span>
+              <span className="button-icon"><IconArrowRight size={20} /></span>
             </button>
 
             {/* Player stats */}
             <div className="player-stats">
               <div className="stat-item">
-                <span className="stat-icon">⭐</span>
+                <span className="stat-icon"><IconStar size={16} /></span>
                 <span className="stat-label">Rating ELO</span>
                 <span className="stat-value">{user.elo_rating || '—'}</span>
               </div>
               <div className="stat-item">
-                <span className="stat-icon">🎮</span>
+                <span className="stat-icon"><IconPlay size={16} /></span>
                 <span className="stat-label">Jogos</span>
                 <span className="stat-value">{user.games_played || 0}</span>
               </div>
               <div className="stat-item">
-                <span className="stat-icon">🏆</span>
+                <span className="stat-icon"><IconTrophy size={16} /></span>
                 <span className="stat-label">Vitórias</span>
                 <span className="stat-value">
                   {user.games_played
@@ -231,7 +232,7 @@ const Matchmaking: React.FC = () => {
         ) : (
           <div className="searching-container">
             <div className="searching-animation">
-              <div className="chess-piece-animated">♞</div>
+              <img src="/logo/LOGO.png" alt="A procurar" className="chess-piece-animated" />
               <div className="searching-pulse" />
             </div>
 

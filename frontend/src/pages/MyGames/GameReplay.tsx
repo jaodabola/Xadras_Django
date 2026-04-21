@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ChessBoard from '../../components/ChessBoard/ChessBoard';
 import { games } from '../../services/api';
+import { IconAlert, IconCamera, IconGlobe, IconPlay, IconPause, IconSkipBack, IconSkipForward, IconStepBack } from '../../components/Icons/Icons';
 import './GameReplay.css';
 import EvaluationBar from '../../components/EvaluationBar/EvaluationBar';
 import { useStockfish } from '../../hooks/useStockfish';
@@ -118,7 +119,7 @@ const GameReplay: React.FC = () => {
     return (
       <div className="replay-page">
         <div className="replay-error">
-          <span>❌</span>
+          <IconAlert size={48} />
           <p>{error || 'Partida não encontrada.'}</p>
           <Link to="/my-games" className="btn btn-secondary">
             ← Voltar
@@ -134,8 +135,8 @@ const GameReplay: React.FC = () => {
       <div className="replay-header">
         <Link to="/my-games" className="replay-back">← Minhas Partidas</Link>
         <div className="replay-title-row">
-          <h1>
-            {data.game_type === 'LIVE_CAPTURE' ? '📷' : '🌐'}{' '}
+          <h1 className="flex-center-gap">
+            {data.game_type === 'LIVE_CAPTURE' ? <IconCamera size={24} /> : <IconGlobe size={24} />}
             Partida #{data.game_id}
           </h1>
           {getResultLabel() && (
@@ -143,9 +144,9 @@ const GameReplay: React.FC = () => {
           )}
         </div>
         <div className="replay-meta">
-          <span>⬜ {data.white_player}</span>
+          <span className="flex-center-gap"><span className="color-dot white-dot"></span> {data.white_player}</span>
           <span className="replay-vs">vs</span>
-          <span>⬛ {data.black_player || '—'}</span>
+          <span className="flex-center-gap"><span className="color-dot black-dot"></span> {data.black_player || '—'}</span>
           <span className="replay-separator">·</span>
           <span>{data.total_moves} jogadas</span>
           <span className="replay-separator">·</span>
@@ -184,7 +185,7 @@ const GameReplay: React.FC = () => {
               disabled={currentMove === 0}
               title="Primeira jogada (Home)"
             >
-              ⏮
+              <IconSkipBack size={16} />
             </button>
             <button
               className="control-btn"
@@ -192,14 +193,14 @@ const GameReplay: React.FC = () => {
               disabled={currentMove === 0}
               title="Jogada anterior (←)"
             >
-              ◀
+              <IconStepBack size={16} />
             </button>
             <button
               className={`control-btn play-btn ${isPlaying ? 'playing' : ''}`}
               onClick={() => setIsPlaying((p) => !p)}
               title="Reproduzir (Espaço)"
             >
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? <IconPause size={16} /> : <IconPlay size={16} />}
             </button>
             <button
               className="control-btn"
@@ -207,7 +208,7 @@ const GameReplay: React.FC = () => {
               disabled={currentMove === data.fens.length - 1}
               title="Próxima jogada (→)"
             >
-              ▶
+              <IconPlay size={16} />
             </button>
             <button
               className="control-btn"
@@ -215,7 +216,7 @@ const GameReplay: React.FC = () => {
               disabled={currentMove === data.fens.length - 1}
               title="Última jogada (End)"
             >
-              ⏭
+              <IconSkipForward size={16} />
             </button>
 
             <div style={{ width: '1px', alignSelf: 'stretch', backgroundColor: 'var(--border-color, #ccc)', margin: '0 4px' }}></div>
@@ -259,7 +260,7 @@ const GameReplay: React.FC = () => {
                 >
                   {isWhite && <span className="move-number">{displayNumber}.</span>}
                   {!isWhite && <span className="move-number" style={{ visibility: 'hidden' }}>{displayNumber}.</span>}
-                  <span className="move-color">{isWhite ? '⬜' : '⬛'}</span>
+                  <span className={`color-dot ${isWhite ? 'white-dot' : 'black-dot'}`} style={{ marginRight: '8px' }}></span>
                   <span className="move-text">Jogada {moveIdx}</span>
                 </div>
               );

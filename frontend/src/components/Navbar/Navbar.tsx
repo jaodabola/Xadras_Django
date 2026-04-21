@@ -33,7 +33,7 @@ const Navbar: React.FC = () => {
         {/* Lado esquerdo: Logo + links de navegação */}
         <div className="navbar-left">
           <Link to="/" className="navbar-logo" onClick={closeMobile}>
-            <img src="/public/logo/logo.png" alt="Logo" className="logo-icon" />
+            <img src="/logo/LOGO.png" alt="Xadras" className="logo-icon" />
             <span className="logo-text">Xadras</span>
           </Link>
 

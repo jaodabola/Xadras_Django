@@ -38,7 +38,7 @@ const TournamentStandingsTab: React.FC<TournamentStandingsTabProps> = ({ standin
                 </div>
             ) : (
                 <div className="empty-state">
-                    <div className="empty-icon">🏆</div>
+                    <img src="/logo/LOGO_TOURNAMENT.png" alt="Torneios" className="empty-icon-img" />
                     <p>A classificação final ou parcial ainda não está disponível.</p>
                     <p className="help-text">Aguardando a conclusão da primeira ronda.</p>
                 </div>

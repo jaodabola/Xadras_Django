@@ -1,5 +1,6 @@
 import React from 'react';
 import LoadingSpinner from '../../../components/LoadingSpinner/LoadingSpinner';
+import { IconEdit, IconGlobe, IconCamera, IconAlert, IconSave } from '../../../components/Icons/Icons';
 
 export interface TournamentEditFormProps {
     editForm: {
@@ -31,7 +32,7 @@ const TournamentEditForm: React.FC<TournamentEditFormProps> = ({
 }) => {
     return (
         <div className="edit-form">
-            <h3 className="edit-form-title">✏️ Editar Torneio</h3>
+            <h3 className="edit-form-title flex-center-gap"><IconEdit size={24} /> Editar Torneio</h3>
 
             {/* Row 1: Name */}
             <div className="form-group">
@@ -139,7 +140,7 @@ const TournamentEditForm: React.FC<TournamentEditFormProps> = ({
                             onChange={e => setEditForm({ ...editForm, is_public: e.target.checked })}
                             className="toggle-checkbox"
                         />
-                        <span className="toggle-text">🌐 Torneio Público</span>
+                        <span className="toggle-text flex-center-gap"><IconGlobe size={18} /> Torneio Público</span>
                     </label>
                     <span className="toggle-hint">Visível para todos os utilizadores</span>
                 </div>
@@ -151,7 +152,7 @@ const TournamentEditForm: React.FC<TournamentEditFormProps> = ({
                             onChange={e => setEditForm({ ...editForm, vision_enabled: e.target.checked })}
                             className="toggle-checkbox"
                         />
-                        <span className="toggle-text">📹 Vision AI Ativado</span>
+                        <span className="toggle-text flex-center-gap"><IconCamera size={18} /> Vision AI Ativado</span>
                     </label>
                     <span className="toggle-hint">Reconhecimento automático de posições</span>
                 </div>
@@ -170,15 +171,15 @@ const TournamentEditForm: React.FC<TournamentEditFormProps> = ({
             </div>
 
             {selectedTournament.status !== 'REGISTRATION' && (
-                <div className="edit-warning">
-                    ⚠️ Formato e capacidade não podem ser alterados após o torneio ter começado.
+                <div className="edit-warning flex-center-gap">
+                    <IconAlert size={20} /> Formato e capacidade não podem ser alterados após o torneio ter começado.
                 </div>
             )}
 
             <div className="edit-actions">
                 <button className="btn btn-secondary" onClick={onCancel}>Cancelar</button>
-                <button className="btn btn-primary" onClick={onSave} disabled={actionLoading === 'saving'}>
-                    {actionLoading === 'saving' ? <LoadingSpinner size="small" /> : '💾 Guardar Alterações'}
+                <button className="btn btn-primary flex-center-gap" onClick={onSave} disabled={actionLoading === 'saving'}>
+                    {actionLoading === 'saving' ? <LoadingSpinner size="small" /> : <><IconSave size={18} /> Guardar Alterações</>}
                 </button>
             </div>
         </div>

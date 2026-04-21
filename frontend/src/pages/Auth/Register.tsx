@@ -75,8 +75,7 @@ const Register: React.FC = () => {
 
         {/* Logo */}
         <div className="auth-logo">
-          <span className="auth-logo-icon">♞</span>
-          <span className="auth-logo-name">Xadras</span>
+          <img src="/logo/LOGO.png" alt="Xadras" className="auth-logo-img" />
         </div>
 
         <h2>Criar conta</h2>

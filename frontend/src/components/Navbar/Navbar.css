@@ -283,8 +283,8 @@
   .navbar-content {
     display: none;
     position: absolute;
-    top: calc(3.75rem + 152px);
-    /* Fallback height under links */
+    top: calc(3.75rem + 196px);
+    /* Adjusted height to fit 4 links */
     left: 0;
     right: 0;
     background: var(--card);

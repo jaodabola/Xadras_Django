@@ -325,6 +325,15 @@
 .piece-icon {
   font-size: 1.125rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.piece-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
 }
 
 .color-label {

@@ -13,7 +13,7 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({
   currentMoveIndex,
   onMoveClick,
 }) => {
-  const movesEndRef = useRef<HTMLDivElement>(null);
+  const movesContainerRef = useRef<HTMLDivElement>(null);
 
   const handleMoveClick = (moveIndex: number) => {
     if (onMoveClick) {
@@ -22,15 +22,16 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({
   };
 
   useEffect(() => {
-    if (movesEndRef.current) {
-      movesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    // Scroll apenas dentro do contentor, sem mover a página
+    if (movesContainerRef.current) {
+      movesContainerRef.current.scrollTop = movesContainerRef.current.scrollHeight;
     }
   }, [moveHistory]);
 
   return (
     <div className="move-history">
       <h3>Histórico de Jogadas</h3>
-      <div className="moves-container">
+      <div className="moves-container" ref={movesContainerRef}>
         {moveHistory.map((movePair, index) => (
           <div key={index} className="move-pair">
             <span className="move-number">{index + 1}.</span>
@@ -50,8 +51,6 @@ const MoveHistory: React.FC<MoveHistoryProps> = ({
             )}
           </div>
         ))}
-        {/* Invisible anchor to scroll into view */}
-        <div ref={movesEndRef} />
       </div>
     </div>
   );

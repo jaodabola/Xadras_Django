@@ -212,22 +212,25 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.75rem;
-  /* Reduzido */
   min-width: 10rem;
-  /* Reduzido */
   background: #57463a;
   color: #f0d9b5;
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
   font-size: 0.95rem;
-  /* Reduzido */
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
   justify-content: center;
   transition: var(--transition);
 }
+
+.btn-primary svg {
+  fill: #f0d9b5;
+  flex-shrink: 0;
+}
+
 
 .btn-primary:hover {
   background: #6b5347;
@@ -460,11 +463,17 @@
   justify-content: center;
   width: 3rem;
   height: 3rem;
-  background: var(--fg);
-  color: var(--bg);
+  background: #57463a;
+  color: #ffffff;
   border-radius: var(--radius-lg);
-  font-size: 1.25rem;
   margin-bottom: 1.5rem;
+  flex-shrink: 0;
+}
+
+.feature-icon-box svg {
+  display: block;
+  stroke: #f0d9b5;
+  color: #f0d9b5;
 }
 
 .feature-card-title {
@@ -522,6 +531,14 @@
   color: var(--muted-fg);
 }
 
+.highlight-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #57463a;
+  flex-shrink: 0;
+}
+
 /* ═══════════════════════════════════════════════
    FOOTER
    ═══════════════════════════════════════════════ */
@@ -569,8 +586,10 @@
   color: var(--fg);
 }
 
-.footer-logo-icon {
-  font-size: 1.5rem;
+.footer-logo-img {
+  height: 1.75rem;
+  width: auto;
+  object-fit: contain;
 }
 
 .footer-logo-name {

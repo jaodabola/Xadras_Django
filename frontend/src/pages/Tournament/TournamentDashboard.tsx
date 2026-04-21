@@ -161,7 +161,7 @@ const TournamentDashboard: React.FC = () => {
           </div>
         ) : filteredTournaments.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">🏆</div>
+            <img src="/logo/LOGO_TOURNAMENT.png" alt="Torneios" className="empty-icon-img" />
             <h3>Nenhum torneio encontrado</h3>
             <p>
               {tournaments.length === 0
@@ -215,17 +215,6 @@ const TournamentDashboard: React.FC = () => {
                     Ver Detalhes
                   </button>
 
-                  {tournament.status === 'REGISTRATION' &&
-                    tournament.participant_count < tournament.max_participants &&
-                    !user?.isGuest && (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleJoinTournament(tournament.id)}
-                        disabled={loading}
-                      >
-                        Participar
-                      </button>
-                    )}
 
                 </div>
               </div>

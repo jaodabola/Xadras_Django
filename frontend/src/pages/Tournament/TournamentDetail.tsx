@@ -8,6 +8,7 @@ import TournamentInfoTab from './components/TournamentInfoTab';
 import TournamentPairingsTab from './components/TournamentPairingsTab';
 import TournamentStandingsTab from './components/TournamentStandingsTab';
 import TournamentDeleteModal from './components/TournamentDeleteModal';
+import { IconArrowRight, IconCrown, IconUsers, IconCalendar, IconClock, IconEdit, IconTrash, IconPlay, IconCamera, IconTrophy } from '../../components/Icons/Icons';
 import './TournamentDetail.css';
 
 interface Pairing {
@@ -287,8 +288,8 @@ const TournamentDetail: React.FC = () => {
       <div className="bg-glow bg-glow-secondary"></div>
 
       <div className="detail-content-wrapper">
-        <button className="back-button" onClick={() => navigate('/tournaments')}>
-          <span className="icon">←</span> Voltar aos Torneios
+        <button className="back-button flex-center-gap" onClick={() => navigate('/tournaments')}>
+          <IconArrowRight size={18} style={{ transform: 'rotate(180deg)' }} /> Voltar aos Torneios
         </button>
 
         {/* Error Display */}
@@ -333,21 +334,21 @@ const TournamentDetail: React.FC = () => {
                   )}
                   {isOrganizer && (
                     <button
-                      className="btn btn-outline btn-icon"
+                      className="btn btn-outline btn-icon flex-center-gap"
                       onClick={() => setIsEditing(true)}
                       title="Editar Torneio"
                     >
-                      ✏️
+                      <IconEdit size={16} />
                     </button>
                   )}
                   {isOrganizer && (
                     <button
-                      className="btn btn-danger-outline btn-icon"
+                      className="btn btn-danger-outline btn-icon flex-center-gap"
                       onClick={() => setShowDeleteModal(true)}
                       disabled={actionLoading !== null}
                       title="Apagar Torneio"
                     >
-                      🗑
+                      <IconTrash size={16} />
                     </button>
                   )}
                 </div>
@@ -357,14 +358,14 @@ const TournamentDetail: React.FC = () => {
 
               <div className="tournament-meta-pills">
                 <div className="meta-pill">
-                  <span className="meta-icon">👑</span>
+                  <span className="meta-icon"><IconCrown size={18} /></span>
                   <div className="meta-text">
                     <span className="meta-label">Organizador</span>
                     <span className="meta-value">{selectedTournament.created_by_username}</span>
                   </div>
                 </div>
                 <div className="meta-pill">
-                  <span className="meta-icon">👥</span>
+                  <span className="meta-icon"><IconUsers size={18} /></span>
                   <div className="meta-text">
                     <span className="meta-label">Participantes</span>
                     <span className="meta-value">
@@ -373,14 +374,14 @@ const TournamentDetail: React.FC = () => {
                   </div>
                 </div>
                 <div className="meta-pill">
-                  <span className="meta-icon">📅</span>
+                  <span className="meta-icon"><IconCalendar size={18} /></span>
                   <div className="meta-text">
                     <span className="meta-label">Criado a</span>
                     <span className="meta-value">{formatDate(selectedTournament.created_at)}</span>
                   </div>
                 </div>
                 <div className="meta-pill">
-                  <span className="meta-icon">⏱️</span>
+                  <span className="meta-icon"><IconClock size={18} /></span>
                   <div className="meta-text">
                     <span className="meta-label">Controlo de Tempo</span>
                     <span className="meta-value">{selectedTournament.time_control || 'N/A'} {selectedTournament.increment ? `+ ${selectedTournament.increment}s` : ''}</span>
@@ -392,17 +393,17 @@ const TournamentDetail: React.FC = () => {
               {isOrganizer && (
                 <div className="organizer-controls-inline">
                   <div className="controls-header">
-                    <h3>🛠️ Painel de Gestão Direta</h3>
+                    <h3>Painel de Gestão Direta</h3>
                   </div>
                   <div className="control-buttons">
                     {selectedTournament.status === 'REGISTRATION' && (
                       <div className="control-action-group">
                         <button
-                          className="btn btn-primary glow-btn"
+                          className="btn btn-primary glow-btn flex-center-gap"
                           onClick={handleGeneratePairings}
                           disabled={actionLoading !== null || selectedTournament.participant_count < 2}
                         >
-                          {actionLoading === 'generate_pairings' ? <LoadingSpinner size="small" /> : '▶ Iniciar Torneio e Gerar 1ª Ronda'}
+                          {actionLoading === 'generate_pairings' ? <LoadingSpinner size="small" /> : <><IconPlay size={16} /> Iniciar Torneio e Gerar 1ª Ronda</>}
                         </button>
                         {selectedTournament.participant_count < 2 && (
                           <span className="help-text-inline">São necessários pelo menos 2 participantes para iniciar.</span>
@@ -413,18 +414,18 @@ const TournamentDetail: React.FC = () => {
                     {selectedTournament.status === 'IN_PROGRESS' && pairings.length > 0 && (
                       <div className="control-action-group">
                         <button
-                          className="btn btn-secondary"
+                          className="btn btn-secondary flex-center-gap"
                           onClick={handleAssignBoards}
                           disabled={actionLoading !== null}
                         >
-                          {actionLoading === 'assign_boards' ? <LoadingSpinner size="small" /> : '📹 Atribuir Tabuleiros Vision'}
+                          {actionLoading === 'assign_boards' ? <LoadingSpinner size="small" /> : <><IconCamera size={16} /> Atribuir Tabuleiros Vision</>}
                         </button>
                         <button
-                          className="btn btn-primary"
+                          className="btn btn-primary flex-center-gap"
                           onClick={handleStartRound}
                           disabled={actionLoading !== null}
                         >
-                          {actionLoading === 'start_round' ? <LoadingSpinner size="small" /> : '▶️ Iniciar Ronda'}
+                          {actionLoading === 'start_round' ? <LoadingSpinner size="small" /> : <><IconPlay size={16} /> Iniciar Ronda</>}
                         </button>
                       </div>
                     )}
@@ -439,22 +440,22 @@ const TournamentDetail: React.FC = () => {
         <div className="tabs-container animate-fade-in">
           <div className="tabs-list">
             <button
-              className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
+              className={`tab-button flex-center-gap ${activeTab === 'info' ? 'active' : ''}`}
               onClick={() => setActiveTab('info')}
             >
-              ℹ️ Participantes
+              <IconUsers size={16} /> Participantes
             </button>
             <button
-              className={`tab-button ${activeTab === 'pairings' ? 'active' : ''}`}
+              className={`tab-button flex-center-gap ${activeTab === 'pairings' ? 'active' : ''}`}
               onClick={() => setActiveTab('pairings')}
             >
-              🎯 Emparelhamentos
+              <IconCalendar size={16} /> Emparelhamentos
             </button>
             <button
-              className={`tab-button ${activeTab === 'standings' ? 'active' : ''}`}
+              className={`tab-button flex-center-gap ${activeTab === 'standings' ? 'active' : ''}`}
               onClick={() => setActiveTab('standings')}
             >
-              🏆 Classificação
+              <IconTrophy size={16} /> Classificação
             </button>
           </div>
         </div>

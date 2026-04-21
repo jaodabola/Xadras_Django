@@ -7,6 +7,7 @@ import CapturedPieces from '../CapturedPieces/CapturedPieces';
 import CameraMode from '../CameraMode/CameraMode';
 import { ClockPanel, useGameClock } from '../GameClock/GameClock';
 import type { MovePair } from '../../types';
+import { IconCamera } from '../Icons/Icons';
 import './Game.css';
 
 import { useParams, useNavigate } from 'react-router-dom';
@@ -482,14 +483,15 @@ const Game: React.FC = () => {
     return lastMove || null;
   };
 
-  // Get piece symbol for display
+  // Get piece symbol for display (using actual piece SVGs via img)
   const getPieceSymbol = (piece: { type: string; color: string }) => {
-    const symbols: Record<string, string> = {
-      p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚',
-      P: '♙', N: '♘', B: '♗', R: '♖', Q: '♕', K: '♔',
-    };
-    const pieceKey = piece.color === 'b' ? piece.type.toLowerCase() : piece.type.toUpperCase();
-    return symbols[pieceKey] || '';
+    return (
+      <img 
+        src={`/pieces/${piece.color}${piece.type.toUpperCase()}.svg`} 
+        alt={piece.type} 
+        style={{ width: '1.25em', height: '1.25em', verticalAlign: 'middle', userSelect: 'none' }} 
+      />
+    );
   };
 
   // Calculate material value of captured pieces
@@ -707,11 +709,11 @@ const Game: React.FC = () => {
           {/* Botão do modo câmara — apenas para jogos locais */}
           {!gameId && (
             <button
-              className={`camera-toggle-btn ${cameraMode ? 'camera-toggle-btn--active' : ''}`}
+              className={`camera-toggle-btn flex-center-gap ${cameraMode ? 'camera-toggle-btn--active' : ''}`}
               onClick={toggleCameraMode}
               title={cameraMode ? 'Desativar câmara' : 'Ativar câmara para deteção do tabuleiro'}
             >
-              {cameraMode ? '📷 Câmara Ativa' : '📷 Câmara'}
+              <IconCamera size={18} /> {cameraMode ? 'Câmara Ativa' : 'Câmara'}
             </button>
           )}
 

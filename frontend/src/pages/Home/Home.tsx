@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { IconBolt, IconTrophy, IconMonitor, IconClock, IconShield, IconPlay } from '../../components/Icons/Icons';
 import './Home.css';
 
 /* ──────────────── Chess board graphic ──────────────── */
@@ -14,7 +15,6 @@ const PIECES: { row: number; col: number; piece: string; color: 'light' | 'dark'
   { row: 5, col: 5, piece: 'knight', color: 'light' },
 ];
 
-/* ── Mapeamento peça → nome de ficheiro SVG (Lichess cburnett) ── */
 const PIECE_SVG: Record<string, { light: string; dark: string }> = {
   king: { light: 'wK', dark: 'bK' },
   queen: { light: 'wQ', dark: 'bQ' },
@@ -53,32 +53,32 @@ function ChessboardGraphic() {
   );
 }
 
-/* ──────────────── Features ──────────────── */
+/* ──────────────── Data ──────────────── */
 const FEATURES = [
   {
-    icon: '⚡',
+    Icon: IconBolt,
     title: 'Encontrar Jogo Rápido',
     description: 'Encontre adversários em segundos com o nosso sistema inteligente de matchmaking baseado em rating.',
     href: '/play',
   },
   {
-    icon: '🏆',
+    Icon: IconTrophy,
     title: 'Torneios',
     description: 'Participe em torneios diários e semanais e demonstre o seu valor contra jogadores de todo o mundo.',
-    href: '/play',
+    href: '/tournaments',
   },
   {
-    icon: '🖥️',
+    Icon: IconMonitor,
     title: 'Jogo Local',
     description: 'Jogue xadrez com um amigo no mesmo dispositivo. Sem necessidade de conta.',
-    href: '/play',
+    href: '/game',
   },
 ];
 
 const HIGHLIGHTS = [
-  { icon: '⚡', text: 'Jogos instantâneos' },
-  { icon: '🛡️', text: 'Jogo justo' },
-  { icon: '⏱️', text: 'Todos os ritmos' },
+  { Icon: IconBolt, text: 'Jogos instantâneos' },
+  { Icon: IconShield, text: 'Jogo justo' },
+  { Icon: IconClock, text: 'Todos os ritmos' },
 ];
 
 /* ──────────────── Main Component ──────────────── */
@@ -111,34 +111,25 @@ const Home: React.FC = () => {
 
           {/* Left */}
           <div className="hero-left">
-            {/* Online badge
-            <div className="hero-badge">
-              <span className="badge-dot" />
-              <span>1.247 jogadores online</span>
-            </div>
-            */}
-            {/* Title */}
             <h1 className="hero-title">
               Jogue Xadrez.
               <span className="hero-title-sub">Domine o Jogo.</span>
             </h1>
 
-            {/* Subtitle */}
             <p className="hero-subtitle">
               Junte-se à nossa comunidade de xadrez. Dispute partidas,
               suba no ranking e demonstre as suas capacidades no Xadras.
             </p>
 
-            {/* CTA buttons */}
             <div className="hero-cta">
               <button className="btn-primary" onClick={handlePlayClick}>
-                <span>▶</span>
-                {user ? 'Jogar Agora' : 'Jogar Agora'}
+
+                Jogar Agora
+                <IconPlay />
               </button>
-              <Link to="/play" className="btn-outline">Ver Torneios</Link>
+              <Link to="/tournaments" className="btn-outline">Ver Torneios</Link>
             </div>
 
-            {/* Guest notice */}
             {user && user.isGuest && (
               <div className="guest-notice">
                 <p>
@@ -148,8 +139,6 @@ const Home: React.FC = () => {
                 </p>
               </div>
             )}
-
-
           </div>
 
           {/* Right – decorative board */}
@@ -164,18 +153,16 @@ const Home: React.FC = () => {
       <section className="features-section">
         <div className="features-inner">
 
-          {/* Header */}
           <div className="features-header">
             <h2 className="features-title">Tudo o que necessita para jogar</h2>
             <p className="features-subtitle">Simples, rápido e feito para amantes de xadrez.</p>
           </div>
 
-          {/* Cards */}
           <div className="features-grid">
             {FEATURES.map(f => (
               <Link key={f.title} to={f.href} className="feature-card">
                 <div className="feature-icon-box">
-                  <span>{f.icon}</span>
+                  <f.Icon />
                 </div>
                 <h3 className="feature-card-title">{f.title}</h3>
                 <p className="feature-card-desc">{f.description}</p>
@@ -186,11 +173,10 @@ const Home: React.FC = () => {
             ))}
           </div>
 
-          {/* Highlights bar */}
           <div className="highlights-bar">
             {HIGHLIGHTS.map((h, i) => (
               <div key={i} className="highlight-item">
-                <span>{h.icon}</span>
+                <span className="highlight-icon"><h.Icon /></span>
                 <span>{h.text}</span>
               </div>
             ))}
@@ -204,7 +190,7 @@ const Home: React.FC = () => {
         <div className="footer-inner">
           <div className="footer-brand">
             <Link to="/" className="footer-logo">
-              <span className="footer-logo-icon">♞</span>
+              <img src="/logo/LOGO.png" alt="Xadras" className="footer-logo-img" />
               <span className="footer-logo-name">Xadras</span>
             </Link>
             <p className="footer-tagline">Jogue xadrez, à sua maneira.</p>
@@ -214,8 +200,8 @@ const Home: React.FC = () => {
             {[
               { to: '/', label: 'Início' },
               { to: '/play', label: 'Encontrar Jogo' },
-              { to: '/play', label: 'Torneios' },
-              { to: '/play', label: 'Jogo Local' },
+              { to: '/tournaments', label: 'Torneios' },
+              { to: '/game', label: 'Jogo Local' },
             ].map(l => (
               <Link key={l.label} to={l.to} className="footer-link">{l.label}</Link>
             ))}

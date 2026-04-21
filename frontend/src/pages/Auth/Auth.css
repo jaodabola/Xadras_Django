@@ -28,13 +28,10 @@
   margin-bottom: 1.75rem;
 }
 
-.auth-logo-icon { font-size: 1.625rem; line-height: 1; }
-
-.auth-logo-name {
-  font-family: var(--font-serif);
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: var(--fg);
+.auth-logo-img {
+  height: 2.5rem;
+  width: auto;
+  object-fit: contain;
 }
 
 /* Título */

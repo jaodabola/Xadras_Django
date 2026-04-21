@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { IconGlobe, IconCamera, IconLayers, IconTrash, IconArrowRight } from '../../components/Icons/Icons';
 import { games } from '../../services/api';
 import './MyGames.css';
 
@@ -81,11 +82,18 @@ const MyGames: React.FC = () => {
   };
 
   const getTypeIcon = (type: string) => {
-    return type === 'LIVE_CAPTURE' ? '📷' : '🌐';
+    return type === 'LIVE_CAPTURE' ? <IconCamera size={18} /> : <IconGlobe size={18} />;
   };
 
   const getTypeLabel = (type: string) => {
     return type === 'LIVE_CAPTURE' ? 'Captada' : 'Online';
+  };
+
+  const renderFilterIcon = (f: FilterType) => {
+    if (f === 'ALL') return <IconLayers size={16} />;
+    if (f === 'ONLINE') return <IconGlobe size={16} />;
+    if (f === 'LIVE_CAPTURE') return <IconCamera size={16} />;
+    return null;
   };
 
   return (
@@ -102,10 +110,11 @@ const MyGames: React.FC = () => {
         {(['ALL', 'ONLINE', 'LIVE_CAPTURE'] as FilterType[]).map((f) => (
           <button
             key={f}
-            className={`filter-btn ${filter === f ? 'active' : ''}`}
+            className={`filter-btn flex-center-gap ${filter === f ? 'active' : ''}`}
             onClick={() => setFilter(f)}
           >
-            {f === 'ALL' ? '📋 Todas' : f === 'ONLINE' ? '🌐 Online' : '📷 Captadas'}
+            {renderFilterIcon(f)}
+            {f === 'ALL' ? 'Todas' : f === 'ONLINE' ? 'Online' : 'Captadas'}
           </button>
         ))}
       </div>
@@ -119,7 +128,7 @@ const MyGames: React.FC = () => {
           </div>
         ) : gameList.length === 0 ? (
           <div className="my-games-empty">
-            <span className="empty-icon">♟️</span>
+            <img src="/logo/LOGO.png" alt="Xadras" className="empty-icon-img" />
             <h3>Nenhuma partida encontrada</h3>
             <p>As tuas partidas aparecerão aqui quando jogares ou captares uma partida com o telemóvel.</p>
           </div>
@@ -136,9 +145,15 @@ const MyGames: React.FC = () => {
                   </span>
                   <div className="game-card-info">
                     <div className="game-card-players">
-                      <span className="player-white">⬜ {game.white_player.username}</span>
+                      <span className="player-white">
+                        <span className="color-dot white-dot"></span>
+                        {game.white_player.username}
+                      </span>
                       <span className="vs">vs</span>
-                      <span className="player-black">⬛ {game.black_player?.username || '—'}</span>
+                      <span className="player-black">
+                        <span className="color-dot black-dot"></span>
+                        {game.black_player?.username || '—'}
+                      </span>
                     </div>
                     <div className="game-card-meta">
                       <span className="game-date">{formatDate(game.created_at)}</span>
@@ -152,7 +167,7 @@ const MyGames: React.FC = () => {
                   <span className={`game-result ${getResultClass(game)}`}>
                     {getResultLabel(game)}
                   </span>
-                  <span className="game-arrow">→</span>
+                  <span className="game-arrow"><IconArrowRight size={20} /></span>
                 </div>
               </Link>
               <button
@@ -164,7 +179,7 @@ const MyGames: React.FC = () => {
                   setDeleteTarget(game);
                 }}
               >
-                🗑️
+                <IconTrash size={20} />
               </button>
             </div>
           ))

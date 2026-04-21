@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { IconStar } from '../../components/Icons/Icons';
 import './Profile.css';
 
 const Profile: React.FC = () => {
@@ -94,7 +95,6 @@ const Profile: React.FC = () => {
         <div className="profile-container">
             <div className="profile-wrapper">
 
-                {/* Banner Escuro Estilo Chess.com */}
                 <div className="profile-banner">
                     <div className="avatar-wrapper" onClick={triggerFileInput}>
                         <div className={`avatar-container ${!user.isGuest ? 'editable' : ''}`}>
@@ -128,7 +128,7 @@ const Profile: React.FC = () => {
                             {user.isGuest && <span className="guest-badge">Guest</span>}
                         </h1>
                         <div className="profile-elo-badge">
-                            <span className="elo-icon">♟</span> ELO {user.elo_rating || 1200}
+                            <span className="elo-icon"><IconStar size={16} /></span> ELO {user.elo_rating || 1200}
                         </div>
                     </div>
                 </div>

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import './CapturedPieces.css';
 import { CapturedPieces as CapturedPiecesType } from '../../types';
 
 interface CapturedPiecesProps {
   capturedPieces: CapturedPiecesType;
-  getPieceSymbol: (piece: { type: string; color: string }) => string;
+  getPieceSymbol: (piece: { type: string; color: string }) => ReactNode;
   calculateMaterial: (pieces: string[]) => number;
   isSidebar?: boolean;
   className?: string;

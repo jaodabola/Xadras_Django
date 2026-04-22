@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = `http://${window.location.hostname}:8000/api`;
+// Usa a variável de ambiente se existir, caso contrário assume que o Nginx está a atuar como Reverse Proxy
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Criar instância do axios com URL base
 const api = axios.create({

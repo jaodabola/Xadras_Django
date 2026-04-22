@@ -92,7 +92,7 @@ const Navbar: React.FC = () => {
                 {user.isGuest ? (
                   <div className="username-link" style={{ cursor: 'default' }}>
                     <div className="nav-avatar">
-                      <span>{user.username.charAt(0).toUpperCase()}</span>
+                      <span>{user.username?.charAt(0)?.toUpperCase() || '?'}</span>
                     </div>
                     <span className="username-text">{user.username}</span>
                   </div>
@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
                       {user.avatar ? (
                         <img src={user.avatar} alt="Avatar" />
                       ) : (
-                        <span>{user.username.charAt(0).toUpperCase()}</span>
+                        <span>{user.username?.charAt(0)?.toUpperCase() || '?'}</span>
                       )}
                     </div>
                     <span className="username-text">{user.username}</span>

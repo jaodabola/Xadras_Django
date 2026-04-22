@@ -56,7 +56,11 @@ const CameraMode: React.FC<CameraModeProps> = ({ onFenDetected, active }) => {
     setError(null);
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${wsProtocol}://${window.location.hostname}:8000/ws/live-board/?session=${sessionId}`;
+    const wsHost = window.location.host;
+    // Usa VITE_WS_URL se estiver definido no Docker, caso contrário flui através do Nginx proxy
+    const wsUrl = import.meta.env.VITE_WS_URL 
+      ? `${import.meta.env.VITE_WS_URL}/live-board/?session=${sessionId}` 
+      : `${wsProtocol}://${wsHost}/ws/live-board/?session=${sessionId}`;
 
     console.log('[CameraMode] A ligar ao WebSocket:', wsUrl);
     const ws = new WebSocket(wsUrl);

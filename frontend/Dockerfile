@@ -26,8 +26,7 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Nginx config is mounted via docker-compose volume
 
 # Ensure the directory structure exists for Django static files
 RUN mkdir -p /usr/src/app/xadras/staticfiles/admin/

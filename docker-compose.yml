@@ -65,6 +65,7 @@ services:
       - "80:80"
     volumes:
       - static_volume:/usr/src/app/xadras/staticfiles
+      - media_volume:/usr/src/app/xadras/media
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - backend
@@ -109,43 +110,6 @@ services:
     networks:
       - xadras-network
 
-  # Vision AI Service
-  vision-service:
-    build:
-      context: ./vision-service
-      dockerfile: Dockerfile
-    container_name: xadras-vision-service
-    restart: unless-stopped
-    environment:
-      - BACKEND_URL=http://xadras-backend:8000
-      - WS_URL=ws://xadras-backend:8000/ws/vision/
-      - LOG_LEVEL=INFO
-      - PYTHONUNBUFFERED=1
-      - CAMERA_INDEX=0  # Windows: Camera index for OpenCV
-      - CAMERA_WIDTH=1920  # Full HD width
-      - CAMERA_HEIGHT=1080  # Full HD height
-    volumes:
-      - ./vision-service:/app
-      - vision_calibrations:/app/data/calibrations
-      - vision_logs:/app/logs
-      # Camera device access configuration
-      # Windows: Uses OpenCV with camera index (0, 1, 2, etc.)
-      # Linux: Uncomment device mapping below for direct hardware access
-      # - /dev:/dev  # Access to camera devices (Linux only)
-    # privileged: true  # Required for camera access (Linux only)
-    # devices:  # Linux camera devices (uncomment for Linux)
-    #   - /dev/video0:/dev/video0  # Primary camera
-    #   - /dev/video1:/dev/video1  # Secondary camera (if available)
-    ports:
-      - "8001:8001"  # Health check port
-    depends_on:
-      backend:
-        condition: service_started
-      redis:
-        condition: service_healthy
-    networks:
-      - xadras-network
-
 
 # Volumes
 volumes:
@@ -153,8 +117,6 @@ volumes:
   redis_data:
   static_volume:
   media_volume:
-  vision_calibrations:
-  vision_logs:
 
 # Networks
 networks:

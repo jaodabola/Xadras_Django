@@ -126,7 +126,10 @@ const Game: React.FC = () => {
       if (!isComponentMounted) return;
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const wsUrl = `${wsProtocol}://${window.location.hostname}:8000/ws/game/${gameId}/`;
+      const wsHost = window.location.host;
+      const wsUrl = import.meta.env.VITE_WS_URL 
+        ? `${import.meta.env.VITE_WS_URL}/game/${gameId}/` 
+        : `${wsProtocol}://${wsHost}/ws/game/${gameId}/`;
       console.log(`[Game] Setting up WebSocket for game: ${gameId} (Attempt ${reconnectAttempts + 1})`);
 
       ws = new WebSocket(wsUrl);

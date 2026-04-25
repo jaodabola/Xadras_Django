@@ -443,17 +443,24 @@ class TournamentPairing(models.Model):
 
     def update_result_from_game(self):
         """Atualizar o resultado do emparelhamento com base no resultado do jogo associado"""
-        if self.game and self.game.result:
-            if self.game.result == 'WHITE_WIN':
-                self.result = self.WHITE_WIN
-            elif self.game.result == 'BLACK_WIN':
-                self.result = self.BLACK_WIN
-            elif self.game.result == 'DRAW':
-                self.result = self.DRAW
-            self.save()
-
-            # Atualizar pontuações dos participantes
-            self._update_participant_scores()
+        if self.result:
+            return # Já processado, evitar pontuação duplicada
+            
+        if self.game:
+            self.game.refresh_from_db()
+            
+            if self.game.result:
+                if self.game.result == 'WHITE_WIN':
+                    self.result = self.WHITE_WIN
+                elif self.game.result == 'BLACK_WIN':
+                    self.result = self.BLACK_WIN
+                elif self.game.result == 'DRAW':
+                    self.result = self.DRAW
+                
+                if self.result:
+                    self.save()
+                    # Atualizar pontuações dos participantes
+                    self._update_participant_scores()
 
     def _update_participant_scores(self):
         """Atualizar as pontuações dos participantes do torneio com base no resultado"""
@@ -520,7 +527,9 @@ class TournamentPairing(models.Model):
             'physical_board_id': self.physical_board_id,  # Integração IA de Visão
             'camera_id': self.camera_id,  # Integração IA de Visão
             'result': self.result,
+            'game': str(self.game.id) if self.game else None,
             'game_id': str(self.game.id) if self.game else None,
+            'game_status': self.game.status if self.game else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

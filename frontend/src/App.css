@@ -9,6 +9,7 @@
 .app-content {
   flex: 1;
   width: 100%;
+  padding-top: 3.75rem; /* altura da navbar fixa */
 }
 
 /* Container centrado padrão */

@@ -230,6 +230,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         const isBestMoveFrom = bestMove && bestMove.substring(0, 2) === squareId;
         const isBestMoveTo = bestMove && bestMove.substring(2, 4) === squareId;
 
+        const isLeftEdge = file === displayFiles[0];
+        const isBottomEdge = rank === displayRanks[displayRanks.length - 1];
+
         const squareClass = [
           'square',
           isWhite ? 'white' : 'black',
@@ -261,6 +264,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
               position: 'relative'
             }}
           >
+            {isLeftEdge && <div className="coordinate rank">{rank}</div>}
+            {isBottomEdge && <div className="coordinate file">{file}</div>}
+
             {square && (
               <div
                 className={pieceClass}

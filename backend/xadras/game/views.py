@@ -17,6 +17,18 @@ class GameViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        # Para leitura (retrieve/list): inclui também jogos de torneio para permitir assistir
+        if self.action in ('retrieve', 'replay'):
+            from tournaments.models import TournamentPairing
+            tournament_game_ids = TournamentPairing.objects.filter(
+                game__isnull=False
+            ).values_list('game_id', flat=True)
+            return Game.objects.filter(
+                models.Q(white_player=user) |
+                models.Q(black_player=user) |
+                models.Q(id__in=tournament_game_ids)
+            )
+        # Para escrita: apenas jogos em que o utilizador participa
         return Game.objects.filter(
             models.Q(white_player=user) | models.Q(black_player=user)
         )
@@ -117,6 +129,7 @@ class GameViewSet(viewsets.ModelViewSet):
                 game_locked.save()
 
                 # Verificar condições de fim de jogo
+                game_ended = False
                 if chess_board.is_checkmate():
                     game_locked.status = 'FINISHED'
                     # Pretas venceram (brancas estão em xeque-mate)
@@ -125,10 +138,21 @@ class GameViewSet(viewsets.ModelViewSet):
                     else:  # Brancas venceram (pretas estão em xeque-mate)
                         game_locked.result = 'WHITE_WIN'
                     game_locked.save()
+                    game_ended = True
                 elif chess_board.is_stalemate() or chess_board.is_insufficient_material():
                     game_locked.status = 'FINISHED'
                     game_locked.result = 'DRAW'
                     game_locked.save()
+                    game_ended = True
+
+                if game_ended:
+                    from tournaments.models import TournamentPairing
+                    if TournamentPairing.objects.filter(game=game_locked).exists():
+                        from tournaments.tournament_manager import process_tournament_game_result
+                        try:
+                            process_tournament_game_result(game_locked.id)
+                        except Exception as e:
+                            print(f"Error processing tournament game result: {e}")
 
                 serializer = MoveSerializer(move)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -179,6 +203,16 @@ class GameViewSet(viewsets.ModelViewSet):
         # Guardar estatísticas atualizadas
         game.white_player.save()
         game.black_player.save()
+
+        # Se pertencer a um torneio, notificar o gestor de torneios
+        from tournaments.models import TournamentPairing
+        if TournamentPairing.objects.filter(game=game).exists():
+            from tournaments.tournament_manager import process_tournament_game_result
+            try:
+                process_tournament_game_result(game.id)
+            except Exception as e:
+                # Apenas logar, não falhar a resposta de fim de jogo
+                print(f"Error processing tournament game result: {e}")
 
         serializer = self.get_serializer(game)
         return Response(serializer.data)

@@ -93,6 +93,9 @@ class TournamentPairingSerializer(serializers.ModelSerializer):
         source='round.round_number', read_only=True)
     tournament_name = serializers.CharField(
         source='round.tournament.name', read_only=True)
+    game = serializers.PrimaryKeyRelatedField(read_only=True)
+    game_status = serializers.CharField(
+        source='game.status', read_only=True)
     is_bye = serializers.ReadOnlyField()
 
     class Meta:
@@ -102,7 +105,7 @@ class TournamentPairingSerializer(serializers.ModelSerializer):
             'white_player', 'white_player_username',
             'black_player', 'black_player_username',
             'bye_player', 'bye_player_username',
-            'game', 'result', 'board_number', 'is_bye',
+            'game', 'game_status', 'result', 'board_number', 'is_bye',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

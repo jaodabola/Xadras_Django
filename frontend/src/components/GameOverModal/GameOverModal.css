@@ -1,0 +1,88 @@
+/* -- Game Over Modal -- */
+.game-over-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.game-over-modal {
+  background: var(--card);
+  padding: 2.5rem;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  border: 1.5px solid var(--border);
+  animation: scaleIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.game-over-modal h2 {
+  font-size: 1.5rem;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
+  font-family: var(--font-serif);
+}
+
+.game-over-actions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.game-over-actions button {
+  flex: 1;
+}
+
+/* Nota de espectador no ecrã de fim de jogo */
+.game-over-spectator-note {
+  font-size: 0.85rem;
+  color: var(--muted-fg);
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 1rem;
+  margin: -0.5rem 0 0;
+}
+
+/* Quando há só 1 botão (torneio), não expandir ao máximo */
+.game-over-actions:has(> button:only-child) {
+  justify-content: center;
+}
+
+.game-over-actions:has(> button:only-child) button {
+  flex: 0 0 auto;
+  min-width: 200px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

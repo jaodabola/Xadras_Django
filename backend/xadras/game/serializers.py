@@ -23,8 +23,20 @@ class GameSerializer(serializers.ModelSerializer):
     black_player = UserSerializer()
     moves = MoveSerializer(many=True, read_only=True)
     move_count = serializers.IntegerField(read_only=True)
+    tournament_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Game
         fields = ['id', 'white_player', 'black_player', 'status', 'result',
-                  'game_type', 'time_control', 'created_at', 'updated_at', 'fen_string', 'moves', 'move_count']
+                  'game_type', 'time_control', 'created_at', 'updated_at',
+                  'fen_string', 'moves', 'move_count', 'tournament_id']
+
+    def get_tournament_id(self, obj):
+        """Retorna o ID do torneio se este jogo pertencer a um emparelhamento de torneio."""
+        try:
+            pairing = obj.tournament_pairing
+            if pairing:
+                return str(pairing.round.tournament.id)
+        except Exception:
+            pass
+        return None

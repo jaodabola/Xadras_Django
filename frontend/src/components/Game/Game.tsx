@@ -5,6 +5,7 @@ import GameControls from '../GameControls/GameControls';
 import MoveHistory from '../MoveHistory/MoveHistory';
 import CapturedPieces from '../CapturedPieces/CapturedPieces';
 import CameraMode from '../CameraMode/CameraMode';
+import GameOverModal from '../GameOverModal/GameOverModal';
 import { ClockPanel, useGameClock } from '../GameClock/GameClock';
 import type { MovePair } from '../../types';
 import { IconCamera } from '../Icons/Icons';
@@ -38,6 +39,7 @@ const Game: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [resignationWinner, setResignationWinner] = useState<'w' | 'b' | null>(null);
   const [timeoutWinner, setTimeoutWinner] = useState<'w' | 'b' | null>(null);
+  const [remoteCameraActive, setRemoteCameraActive] = useState(false); // Câmara do adversário (torneio)
 
   // Refs after state
   const wsRef = useRef<WebSocket | null>(null);
@@ -215,9 +217,10 @@ const Game: React.FC = () => {
             } else {
               setResignationWinner(winner);
             }
+          } else if (data.type === 'camera_toggle') {
+            // Sincronizar estado da câmara do adversário
+            setRemoteCameraActive(!!data.active);
           } else if (data.type === 'board_update') {
-            // Vision AI board updates are handled in a dedicated interface.
-            // For the classic digital-vs-digital game view we only log them.
             console.log('[Game] board_update message (ignored in Game view):', data);
           } else if (data.type === 'chat') {
             console.log('[Game] Received chat message:', data.message, 'from:', data.user);
@@ -267,7 +270,14 @@ const Game: React.FC = () => {
    * Alternar modo câmara (apenas para jogos locais).
    */
   const toggleCameraMode = useCallback(() => {
-    setCameraMode(prev => !prev);
+    setCameraMode(prev => {
+      const next = !prev;
+      // Sincronizar com o adversário via WebSocket (apenas em jogos online)
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'camera_toggle', active: next }));
+      }
+      return next;
+    });
   }, []);
 
   // handleTimeout: tem de estar ANTES dos early returns (regras dos hooks)
@@ -292,6 +302,11 @@ const Game: React.FC = () => {
   const userColor = gameData?.white_player?.id === currentUser?.id ? 'w'
     : gameData?.black_player?.id === currentUser?.id ? 'b'
       : null;
+
+  // ── Torneio: detetar se é jogo de torneio e se o utilizador é espectador ──
+  const tournamentId: string | null = gameData?.tournament_id ?? null;
+  const isTournamentGame = !!tournamentId;
+  const isSpectator = isTournamentGame && userColor === null;
 
   const totalMoves = moveHistory.reduce((n, p) => n + (p.white ? 1 : 0) + (p.black ? 1 : 0), 0);
 
@@ -522,10 +537,14 @@ const Game: React.FC = () => {
 
   // Determinar se o utilizador pode interagir com o tabuleiro
   const canUserInteract = () => {
+    // Espectadores de torneio nunca interagem
+    if (isSpectator) return false;
+
     // No modo câmara, desativar interação manual
     if (cameraMode) return false;
 
-    if (resignationWinner) return false;
+    // Se o jogo já terminou, desativar interação
+    if (resignationWinner || timeoutWinner || gameData?.status === 'FINISHED') return false;
 
     // Para jogos locais, permitir sempre interação
     if (!gameId || !gameData || !currentUser) {
@@ -613,67 +632,84 @@ const Game: React.FC = () => {
       return resignationWinner === 'w' ? 'Vitória das Brancas por desistência' : 'Vitória das Pretas por desistência';
     }
 
-    if (!gameRef.current.isGameOver()) return null;
+    if (gameRef.current.isGameOver()) {
+      if (gameRef.current.isCheckmate()) {
+        const loserColor = gameRef.current.turn(); // 'w' or 'b'
+        const winnerColor = loserColor === 'w' ? 'b' : 'w';
 
-    if (gameRef.current.isCheckmate()) {
-      const loserColor = gameRef.current.turn(); // 'w' or 'b'
-      const winnerColor = loserColor === 'w' ? 'b' : 'w';
+        if (gameId && gameData && currentUser) {
+          const isUserWhite = gameData.white_player?.id === currentUser.id;
+          const isUserBlack = gameData.black_player?.id === currentUser.id;
 
-      if (gameId && gameData && currentUser) {
+          if (winnerColor === 'w' && isUserWhite) return 'Parabéns, ganhou por xeque-mate!';
+          if (winnerColor === 'b' && isUserBlack) return 'Parabéns, ganhou por xeque-mate!';
+          if (loserColor === 'w' && isUserWhite) return 'Perdeu por xeque-mate.';
+          if (loserColor === 'b' && isUserBlack) return 'Perdeu por xeque-mate.';
+
+          return winnerColor === 'w' ? 'As Brancas ganharam por xeque-mate' : 'As Pretas ganharam por xeque-mate';
+        }
+        return winnerColor === 'w' ? 'Vitória das Brancas' : 'Vitória das Pretas';
+      }
+
+      if (gameRef.current.isDraw()) {
+        if (gameRef.current.isStalemate()) return 'Empate por Rei afogado.';
+        if (gameRef.current.isThreefoldRepetition()) return 'Empate por tripla repetição.';
+        if (gameRef.current.isInsufficientMaterial()) return 'Empate por material insuficiente.';
+        return 'Empate.';
+      }
+    }
+
+    if (gameData?.status === 'FINISHED') {
+      const result = gameData.result;
+      if (gameId && currentUser) {
         const isUserWhite = gameData.white_player?.id === currentUser.id;
         const isUserBlack = gameData.black_player?.id === currentUser.id;
-
-        if (winnerColor === 'w' && isUserWhite) return 'Parabéns, ganhou por xeque-mate!';
-        if (winnerColor === 'b' && isUserBlack) return 'Parabéns, ganhou por xeque-mate!';
-        if (loserColor === 'w' && isUserWhite) return 'Perdeu por xeque-mate.';
-        if (loserColor === 'b' && isUserBlack) return 'Perdeu por xeque-mate.';
-
-        return winnerColor === 'w' ? 'As Brancas ganharam por xeque-mate' : 'As Pretas ganharam por xeque-mate';
+        if (result === 'WHITE_WIN') {
+          if (isUserWhite) return 'Parabéns, ganhou a partida!';
+          if (isUserBlack) return 'Perdeu a partida.';
+          return 'Vitória das Brancas';
+        }
+        if (result === 'BLACK_WIN') {
+          if (isUserBlack) return 'Parabéns, ganhou a partida!';
+          if (isUserWhite) return 'Perdeu a partida.';
+          return 'Vitória das Pretas';
+        }
+        if (result === 'DRAW') return 'Empate.';
       }
-      return winnerColor === 'w' ? 'Vitória das Brancas' : 'Vitória das Pretas';
+      return result === 'WHITE_WIN' ? 'Vitória das Brancas' : result === 'BLACK_WIN' ? 'Vitória das Pretas' : 'Empate.';
     }
 
-    if (gameRef.current.isDraw()) {
-      if (gameRef.current.isStalemate()) return 'Empate por Rei afogado.';
-      if (gameRef.current.isThreefoldRepetition()) return 'Empate por tripla repetição.';
-      if (gameRef.current.isInsufficientMaterial()) return 'Empate por material insuficiente.';
-      return 'Empate.';
-    }
-
-    return 'Jogo terminado.';
+    return null;
   };
 
-  const gameOverMessage = (gameId && (gameRef.current.isGameOver() || resignationWinner || timeoutWinner)) ? getGameOverMessage() : null;
+  const gameOverMessage = (gameId && (gameRef.current.isGameOver() || resignationWinner || timeoutWinner || gameData?.status === 'FINISHED')) ? getGameOverMessage() : (!gameId && gameRef.current.isGameOver()) ? getGameOverMessage() : null;
 
   return (
     <div ref={containerRef} className={`game-container ${isFullscreen ? 'fullscreen' : ''}`}>
-      {/* Game Over Modal para jogos online */}
+      {/* Game Over Modal */}
       {gameOverMessage && (
-        <div className="game-over-modal-overlay">
-          <div className="game-over-modal">
-            <h2>{gameOverMessage}</h2>
-            <div className="game-over-actions">
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  if (leaveGame) leaveGame();
-                  navigate('/play');
-                }}
-              >
-                Novo Jogo
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  if (leaveGame) leaveGame();
-                  navigate('/');
-                }}
-              >
-                Página Inicial
-              </button>
-            </div>
-          </div>
-        </div>
+        <GameOverModal
+          message={gameOverMessage}
+          isSpectator={isSpectator}
+          gameType={isTournamentGame ? 'tournament' : gameId ? 'online' : 'local'}
+          tournamentId={tournamentId}
+          onBackToTournament={() => {
+            if (leaveGame) leaveGame();
+            navigate(`/tournaments/${tournamentId}`);
+          }}
+          onNewGame={() => {
+            if (gameId) {
+              if (leaveGame) leaveGame();
+              navigate('/play');
+            } else {
+              handleNewGame();
+            }
+          }}
+          onGoHome={() => {
+            if (gameId && leaveGame) leaveGame();
+            navigate('/');
+          }}
+        />
       )}
 
       {/* Turn validation error overlay */}
@@ -703,17 +739,28 @@ const Game: React.FC = () => {
             onNewGame={gameId ? undefined : handleNewGame}
             onToggleFullscreen={toggleFullscreen}
             isFullscreen={isFullscreen}
-            onResign={gameId && !gameOverMessage ? handleResign : undefined}
+            onResign={gameId && !gameOverMessage && !isSpectator ? handleResign : undefined}
           />
 
-          {/* Botão do modo câmara — apenas para jogos locais */}
-          {!gameId && (
+          {/* Botão do modo câmara — jogos locais E jogadores de torneio */}
+          {(!gameId || (isTournamentGame && !isSpectator)) && (
             <button
-              className={`camera-toggle-btn flex-center-gap ${cameraMode ? 'camera-toggle-btn--active' : ''}`}
-              onClick={toggleCameraMode}
-              title={cameraMode ? 'Desativar câmara' : 'Ativar câmara para deteção do tabuleiro'}
+              className={`camera-toggle-btn flex-center-gap ${
+                cameraMode ? 'camera-toggle-btn--active' :
+                remoteCameraActive ? 'camera-toggle-btn--remote' : ''
+              }`}
+              onClick={remoteCameraActive ? undefined : toggleCameraMode}
+              disabled={remoteCameraActive}
+              title={
+                remoteCameraActive
+                  ? 'O adversário tem a câmara ativa'
+                  : cameraMode
+                    ? 'Desativar câmara'
+                    : 'Ativar câmara para deteção do tabuleiro'
+              }
             >
-              <IconCamera size={18} /> {cameraMode ? 'Câmara Ativa' : 'Câmara'}
+              <IconCamera size={18} />
+              {remoteCameraActive ? 'Câmara do Adversário' : cameraMode ? 'Câmara Ativa' : 'Câmara'}
             </button>
           )}
 
@@ -755,11 +802,6 @@ const Game: React.FC = () => {
         </div>
 
         <div className="game-info">
-          <div className="material-count">
-            <div>Brancas: {calculateMaterial(capturedPieces.black)}</div>
-            <div>Pretas: {calculateMaterial(capturedPieces.white)}</div>
-          </div>
-
           <MoveHistory
             moveHistory={moveHistory}
             currentMoveIndex={currentMoveIndex}
@@ -772,8 +814,8 @@ const Game: React.FC = () => {
             calculateMaterial={calculateMaterial}
           />
 
-          {/* Painel da câmara — apenas para jogos locais */}
-          {!gameId && (
+          {/* Painel da câmara — jogos locais E jogadores de torneio */}
+          {(!gameId || (isTournamentGame && !isSpectator)) && (
             <CameraMode
               active={cameraMode}
               onFenDetected={handleFenUpdate}

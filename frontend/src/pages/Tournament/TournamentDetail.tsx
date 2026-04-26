@@ -165,10 +165,8 @@ const TournamentDetail: React.FC = () => {
     if (!id) return;
     try {
       setActionLoading('generate_pairings');
-      // Step 1: Start the tournament (REGISTRATION -> IN_PROGRESS, assigns seeds)
+      // startTournament já gera automaticamente a 1ª ronda no backend
       await startTournament(id);
-      // Step 2: Generate pairings for the first round
-      await generatePairings(id);
       await loadTournamentData();
       setActiveTab('pairings');
     } catch (err) {
@@ -321,7 +319,7 @@ const TournamentDetail: React.FC = () => {
 
                 {/* Global Actions */}
                 <div className="header-global-actions">
-                  {(canJoin || isParticipant) && (
+                  {(canJoin || (isParticipant && !isOrganizer)) && (
                     <button
                       className={`btn ${isParticipant ? 'btn-danger' : 'btn-primary'} join-btn`}
                       onClick={handleJoinLeave}
@@ -392,9 +390,7 @@ const TournamentDetail: React.FC = () => {
               {/* Organizer Controls */}
               {isOrganizer && (
                 <div className="organizer-controls-inline">
-                  <div className="controls-header">
-                    <h3>Painel de Gestão Direta</h3>
-                  </div>
+
                   <div className="control-buttons">
                     {selectedTournament.status === 'REGISTRATION' && (
                       <div className="control-action-group">
@@ -408,25 +404,6 @@ const TournamentDetail: React.FC = () => {
                         {selectedTournament.participant_count < 2 && (
                           <span className="help-text-inline">São necessários pelo menos 2 participantes para iniciar.</span>
                         )}
-                      </div>
-                    )}
-
-                    {selectedTournament.status === 'IN_PROGRESS' && pairings.length > 0 && (
-                      <div className="control-action-group">
-                        <button
-                          className="btn btn-secondary flex-center-gap"
-                          onClick={handleAssignBoards}
-                          disabled={actionLoading !== null}
-                        >
-                          {actionLoading === 'assign_boards' ? <LoadingSpinner size="small" /> : <><IconCamera size={16} /> Atribuir Tabuleiros Vision</>}
-                        </button>
-                        <button
-                          className="btn btn-primary flex-center-gap"
-                          onClick={handleStartRound}
-                          disabled={actionLoading !== null}
-                        >
-                          {actionLoading === 'start_round' ? <LoadingSpinner size="small" /> : <><IconPlay size={16} /> Iniciar Ronda</>}
-                        </button>
                       </div>
                     )}
                   </div>
@@ -468,6 +445,7 @@ const TournamentDetail: React.FC = () => {
               pairings={pairings}
               isOrganizer={!!isOrganizer}
               status={selectedTournament.status}
+              currentUserId={user?.id ?? null}
             />
           )}
           {activeTab === 'standings' && <TournamentStandingsTab standings={standings} />}

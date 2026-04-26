@@ -340,10 +340,12 @@ class TournamentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        round_number = request.data.get('round_number')
+        # Usar round_number do body ou o current_round do torneio como fallback
+        round_number = request.data.get('round_number') or tournament.current_round
+
         if not round_number:
             return Response(
-                {'error': 'round_number é obrigatório'},
+                {'error': 'round_number é obrigatório e não há ronda ativa'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -381,14 +383,32 @@ class TournamentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        round_number = request.data.get('round_number')
-        board_assignments = request.data.get('board_assignments', {})
+        # Usar round_number do body ou o current_round do torneio como fallback
+        round_number = request.data.get('round_number') or tournament.current_round
 
         if not round_number:
             return Response(
-                {'error': 'round_number é obrigatório'},
+                {'error': 'round_number é obrigatório e não há ronda ativa'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Aceitar lista de assignments: [{pairing_id, physical_board_id, camera_id}]
+        # ou dicionário legacy: {pairing_id: board_number}
+        raw_assignments = request.data.get('assignments', request.data.get('board_assignments', {}))
+
+        # Converter lista para dicionário indexado por pairing_id
+        if isinstance(raw_assignments, list):
+            board_assignments = {
+                item['pairing_id']: {
+                    'physical_board_id': item.get('physical_board_id'),
+                    'camera_id': item.get('camera_id'),
+                    'board_number': item.get('board_number'),
+                }
+                for item in raw_assignments
+                if 'pairing_id' in item
+            }
+        else:
+            board_assignments = raw_assignments
 
         try:
             manager = TournamentManager(tournament)
@@ -420,6 +440,7 @@ class TournamentViewSet(viewsets.ModelViewSet):
             return Response(
                 {'error': 'Falha ao atribuir tabuleiros'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
             )
 
 

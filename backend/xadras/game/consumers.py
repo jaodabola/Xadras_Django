@@ -1,17 +1,15 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
-from .models import Game, Move
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
-from xadras.middleware import WebSocketRateLimitMiddleware
 import logging
+from django.core.exceptions import ObjectDoesNotExist
 
-User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        from xadras.middleware import WebSocketRateLimitMiddleware
+        
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.game_group_name = f'game_{self.game_id}'
 
@@ -45,6 +43,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
+        from xadras.middleware import WebSocketRateLimitMiddleware
         # Decrementar a contagem de ligações
         if hasattr(self, 'user') and hasattr(self, 'ip_address'):
             WebSocketRateLimitMiddleware.decrement_connection_count(
@@ -107,6 +106,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         Lidar com a mensagem board_update da IA de Visão
         Formato: { "type":"board_update", "uci_list":["e2e4"], "fen":"...", "confidence":0.9 }
         """
+        from .models import Game
         try:
             # Validar campos obrigatórios
             required_fields = ['uci_list', 'fen', 'confidence']

@@ -11,10 +11,8 @@ import logging
 from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
-User = get_user_model()
 
 
 class LiveBoardConsumer(AsyncWebsocketConsumer):
@@ -75,9 +73,13 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
         """
         Processar mensagens recebidas via WebSocket.
 
+        Fluxo otimizado para baixa latência:
+          1. Validar e fazer broadcast ao browser IMEDIATAMENTE
+          2. Persistir na BD em background (não bloqueia o broadcast)
+
         Suporta:
         - 'ping': keep-alive
-        - 'fen_update': FEN enviado pelo telemóvel → guardar + broadcast
+        - 'fen_update': FEN enviado pelo telemóvel → broadcast instantâneo + guardar
         """
         try:
             data = json.loads(text_data)
@@ -91,15 +93,10 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
                 if not fen or fen == self.last_fen:
                     return  # Ignorar duplicados
 
-                # Extrair utilizador do scope (se autenticado via token)
+                self.last_fen = fen
                 user = self.scope.get('user')
 
-                # Guardar na BD (cria Game se necessário, gere takebacks)
-                game_id = await self._persist_fen(fen, user)
-
-                self.last_fen = fen
-
-                # Broadcast para todos os clientes na sessão
+                # ── PASSO 1: Broadcast imediato ao browser (sem esperar pela BD) ──
                 await self.channel_layer.group_send(
                     self.group_name,
                     {
@@ -107,10 +104,14 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
                         'fen': fen,
                         'board_detected': True,
                         'session_id': self.session_id,
-                        'game_id': game_id,
+                        'game_id': self.game_id,  # Pode ser None no primeiro move
                         'utilizador': user.username if user and hasattr(user, 'username') else '',
                     },
                 )
+
+                # ── PASSO 2: Persistir na BD em background (não bloqueia o WS) ──
+                import asyncio
+                asyncio.ensure_future(self._persist_fen_background(fen, user))
 
             else:
                 logger.debug(f'Tipo de mensagem ignorado: {msg_type}')
@@ -118,20 +119,23 @@ class LiveBoardConsumer(AsyncWebsocketConsumer):
         except json.JSONDecodeError:
             logger.error('JSON inválido recebido no LiveBoardConsumer')
 
+    async def _persist_fen_background(self, fen, user):
+        """Persistir FEN na BD sem bloquear o fluxo principal do WebSocket."""
+        try:
+            await self._persist_fen(fen, user)
+        except Exception as e:
+            logger.error(f'Erro ao persistir FEN em background: {e}')
+
     # ---- Persistência na BD ----
 
     @database_sync_to_async
     def _persist_fen(self, fen, user):
         """
         Guardar FEN na BD com suporte a takebacks.
-
-        Lógica:
-        1. Se não existe Game para esta sessão → criar um novo
-        2. Se o FEN é igual a um FEN anterior na história → takeback
-           (apagar moves posteriores)
-        3. Se é um FEN novo → criar novo Move
         """
         from .models import Game, Move
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
 
         # 1. Criar Game se necessário
         if self.game_id is None:

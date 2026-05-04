@@ -24,7 +24,7 @@ class GuestView(APIView):
     Este utilizador é gerado automaticamente com um username único.
     """
 
-    @method_decorator(ratelimit(key="ip", rate="3/m", method="POST", block=True))
+    @method_decorator(ratelimit(key="ip", rate="15/m", method="POST", block=True))
     def post(self, request, *args, **kwargs):
         try:
             # Geração de nome único para o utilizador guest

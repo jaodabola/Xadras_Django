@@ -54,12 +54,10 @@ COPY --from=builder /usr/src/app /usr/src/app
 # Set the working directory to where manage.py is located
 WORKDIR /usr/src/app/xadras
 
-# Ensure all directories exist and have correct permissions before collecting static files
+# Ensure all directories exist and have correct permissions
 RUN mkdir -p /usr/src/app/static /usr/src/app/staticfiles /usr/src/app/media /usr/src/app/xadras/static \
     && chmod -R 755 /usr/src/app/static /usr/src/app/staticfiles /usr/src/app/media /usr/src/app/xadras/static
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --clear
 
 # Expose the port the app runs on
 EXPOSE 8000
@@ -110,7 +108,7 @@ RUN { \
     echo '# Run migrations'; \
     echo 'python manage.py migrate --noinput'; \
     echo ''; \
-    echo '# Collect static files with clear flag to avoid conflicts'; \
+    echo '# Collect static files'; \
     echo 'python manage.py collectstatic --noinput --clear'; \
     echo ''; \
     echo '# Start Daphne ASGI server for WebSocket support'; \

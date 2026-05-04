@@ -29,12 +29,16 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 # Consulte https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # AVISO DE SEGURANÇA: mantenha a chave secreta usada em produção em segredo!
-SECRET_KEY = 'django-insecure-(p0t&gj%=i=swv3imsk16j8sv+x0un*g+pn-qj3+^emc+hy4vd'
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY', 'django-insecure-(p0t&gj%=i=swv3imsk16j8sv+x0un*g+pn-qj3+^emc+hy4vd')
 
 # AVISO DE SEGURANÇA: não execute com o debug ativado em produção!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# O padrão é False se não estiver definido no ambiente
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Apenas para desenvolvimento - restringir em produção
+# Restringir os hosts permitidos por segurança
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS', 'xadras.pt,www.xadras.pt,localhost,127.0.0.1').split(',')
 
 
 # Definição da aplicação
@@ -46,7 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic',  # Usar whitenoise para ficheiros estáticos em desenvolvimento
+    # Usar whitenoise para ficheiros estáticos em desenvolvimento
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',  # Adicionar autenticação por token
@@ -65,12 +70,12 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Configuração de CORS
 CORS_ALLOWED_ORIGINS = [
+    'https://xadras.pt',
+    'https://www.xadras.pt',
     'http://localhost',
     'http://127.0.0.1',
     'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:5173',  # Servidor de desenvolvimento frontend
-    'http://127.0.0.1:5173',  # Servidor de desenvolvimento frontend alternative
+    'http://localhost:5173',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -80,10 +85,13 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://www.xadras.pt',
+    'https://xadras.pt',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento
+CORS_ALLOW_ALL_ORIGINS = os.environ.get(
+    'CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
 
 # Necessário para CORS com credenciais
 CORS_ALLOW_HEADERS = [
@@ -105,12 +113,13 @@ CSRF_COOKIE_HTTPONLY = False  # Apenas se estiver a aceder via JavaScript
 SESSION_COOKIE_HTTPONLY = True
 
 # Apenas se estiver a usar HTTPS
-CSRF_COOKIE_SECURE = False  # Definir como True em produção com HTTPS
-SESSION_COOKIE_SECURE = False  # Definir como True em produção com HTTPS
+CSRF_COOKIE_SECURE = True  # Definir como True em produção com HTTPS
+SESSION_COOKIE_SECURE = True  # Definir como True em produção com HTTPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Adicionar WhiteNoise para ficheiros estáticos
+    # Adicionar WhiteNoise para ficheiros estáticos
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     # O middleware CORS deve ser colocado o mais alto possível, especialmente antes de qualquer middleware que possa gerar respostas
     'corsheaders.middleware.CorsMiddleware',
@@ -146,13 +155,14 @@ ASGI_APPLICATION = 'xadras.asgi.application'
 # Channel Layers — usar Redis se disponível, senão memória (desenvolvimento)
 try:
     import redis as _redis_mod
-    _r = _redis_mod.Redis.from_url(os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0'))
+    _r = _redis_mod.Redis.from_url(
+        os.environ.get('REDIS_URL', 'redis://redis:6379/1'))
     _r.ping()
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                "hosts": [os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')],
+                "hosts": [os.environ.get('REDIS_URL', 'redis://redis:6379/1')],
             },
         },
     }
@@ -168,18 +178,24 @@ except Exception:
 # Base de Dados
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        # 'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': os.environ.get('POSTGRES_DB', 'xadras'),
-        # 'USER': os.environ.get('POSTGRES_USER', 'user'),
-        # 'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'password'),
-        # 'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-        # 'PORT': '5432',
+if os.environ.get('POSTGRES_DB'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB'),
+            'USER': os.environ.get('POSTGRES_USER'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Configuração de Cache
 CACHES = {
@@ -280,13 +296,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Garantir que o diretório de logs existe
-LOGS_DIR = os.path.join(BASE_DIR, 'logs')
-os.makedirs(LOGS_DIR, exist_ok=True)
-
 # Configuração de Log
-# Garantir que DEBUG é True para desenvolvimento
-DEBUG = True
+# O DEBUG já foi definido no topo do ficheiro via variável de ambiente
 
 # Registar todas as consultas SQL
 LOGGING = {

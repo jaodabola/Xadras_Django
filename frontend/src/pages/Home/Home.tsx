@@ -209,7 +209,7 @@ const Home: React.FC = () => {
         </div>
 
         <div className="footer-copy">
-          <p>© {new Date().getFullYear()} Xadras. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} O Xadras ainda esta em desenvolvimento.</p>
         </div>
       </footer>
 

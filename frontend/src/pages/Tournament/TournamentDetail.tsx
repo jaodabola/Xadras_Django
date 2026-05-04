@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament } from '../../contexts/TournamentContext';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
-import TournamentEditForm from './components/TournamentEditForm';
-import TournamentInfoTab from './components/TournamentInfoTab';
-import TournamentPairingsTab from './components/TournamentPairingsTab';
-import TournamentStandingsTab from './components/TournamentStandingsTab';
-import TournamentDeleteModal from './components/TournamentDeleteModal';
+import TournamentEditForm from './Components/TournamentEditForm';
+import TournamentInfoTab from './Components/TournamentInfoTab';
+import TournamentPairingsTab from './Components/TournamentPairingsTab';
+import TournamentStandingsTab from './Components/TournamentStandingsTab';
+import TournamentDeleteModal from './Components/TournamentDeleteModal';
 import { IconArrowRight, IconCrown, IconUsers, IconCalendar, IconClock, IconEdit, IconTrash, IconPlay, IconCamera, IconTrophy } from '../../components/Icons/Icons';
 import './TournamentDetail.css';
 

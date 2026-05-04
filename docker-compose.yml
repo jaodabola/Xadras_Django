@@ -13,13 +13,12 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=xadras.settings
       - PYTHONUNBUFFERED=1
-      - DEBUG=0
+      - DEBUG=${DEBUG:-0}
     volumes:
       - ./backend:/usr/src/app
       - static_volume:/usr/src/app/xadras/staticfiles
       - media_volume:/usr/src/app/xadras/media
-    ports:
-      - "8000:8000"
+    # ports: - "8000:8000" # Porta removida em produção para segurança
     depends_on:
       db:
         condition: service_healthy
@@ -28,31 +27,7 @@ services:
     networks:
       - xadras-network
 
-  # Matchmaking Service
-  matchmaking:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: xadras-matchmaking
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - DJANGO_SETTINGS_MODULE=xadras.settings
-      - PYTHONUNBUFFERED=1
-      - DEBUG=0
-    entrypoint: ["python", "matchmaking/matchmaking_service.py"]
-    volumes:
-      - ./backend:/usr/src/app
-      - static_volume:/usr/src/app/xadras/staticfiles
-      - media_volume:/usr/src/app/xadras/media
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - xadras-network
+
 
   # Frontend Service
   frontend:
@@ -71,6 +46,20 @@ services:
       - backend
     networks:
       - xadras-network
+
+  # Serviço Cloudflare Tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: xadras-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    networks:
+      - xadras-network
+
 
   # Database Service
   db:

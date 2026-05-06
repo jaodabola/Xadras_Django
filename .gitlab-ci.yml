@@ -21,6 +21,7 @@ test_backend:
       echo "POSTGRES_USER=testuser" >> .env
       echo "POSTGRES_PASSWORD=testpass" >> .env
       echo "REDIS_PASSWORD=testpass" >> .env
+      echo "REDIS_URL=redis://:testpass@redis:6379/1" >> .env
       echo "SECRET_KEY=test_secret_key_123" >> .env
       echo "DEBUG=False" >> .env
   script:

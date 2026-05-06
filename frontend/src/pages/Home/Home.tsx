@@ -113,7 +113,7 @@ const Home: React.FC = () => {
           <div className="hero-left">
             <h1 className="hero-title">
               Jogue Xadrez.
-              <span className="hero-title-sub">Domine o Jogo.</span>
+              <span className="hero-title-sub">Domine a Jogo.</span>
             </h1>
 
             <p className="hero-subtitle">
@@ -154,7 +154,7 @@ const Home: React.FC = () => {
         <div className="features-inner">
 
           <div className="features-header">
-            <h2 className="features-title">Tudo o que necessita para jogar</h2>
+            <h2 className="features-title">Tudo o que n necessita para jogar</h2>
             <p className="features-subtitle">Simples, rápido e feito para amantes de xadrez.</p>
           </div>
 

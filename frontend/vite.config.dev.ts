@@ -9,6 +9,10 @@ export default defineConfig({
     open: false, // Não tentar abrir o browser dentro do Docker
     allowedHosts: true,
     // Removido o clientPort: 443 para o WebSocket funcionar em localhost
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

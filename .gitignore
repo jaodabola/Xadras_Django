@@ -163,9 +163,7 @@ setup-ssl-infrastructure.bat
 # ===========================
 # Tests
 # ===========================
-**/tests/
-**/*test*.py
-**/*spec*.py
+# (Ficheiros de teste devem ser incluídos no repositório)
 
 # ===========================
 # Nginx

@@ -1,0 +1,34 @@
+stages:
+  - test
+
+variables:
+  # Configuração padrão do GitLab para Docker-in-Docker
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+test_backend:
+  stage: test
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    # O docker-compose requer a instalação do plugin no alpine
+    - apk add --no-cache docker-cli-compose
+    # Criar um ficheiro .env provisório para os testes (uma vez que o original não vai para o Git)
+    - |
+      echo "POSTGRES_DB=test_xadras" > .env
+      echo "POSTGRES_USER=testuser" >> .env
+      echo "POSTGRES_PASSWORD=testpass" >> .env
+      echo "REDIS_PASSWORD=testpass" >> .env
+      echo "SECRET_KEY=test_secret_key_123" >> .env
+      echo "DEBUG=False" >> .env
+  script:
+    # Executar a suíte de testes com o docker-compose de test
+    - docker compose -p xadras-test -f docker-compose.yml -f docker-compose.test.yml up --build --abort-on-container-exit
+  after_script:
+    # Garantir que os contentores são desligados e volumes apagados (útil se usares runners partilhados)
+    - docker compose -p xadras-test -f docker-compose.yml -f docker-compose.test.yml down -v
+  only:
+    - branches # Executa em todos os commits
+    - merge_requests

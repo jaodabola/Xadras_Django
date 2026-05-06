@@ -3,15 +3,18 @@ services:
     build:
       context: ./backend
       target: dev
-    command: python manage.py runserver 0.0.0.0:8000
+    working_dir: /usr/src/app/xadras
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/usr/src/app
     ports:
       - "8000:8000"
+      - "5173:5173"
     env_file:
       - .env
     environment:
       - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=xadras.settings_dev
     depends_on:
       - db
       - redis
@@ -22,10 +25,8 @@ services:
     build:
       context: ./frontend
       target: dev
+    network_mode: service:backend
     volumes:
       - ./frontend:/app
-    command: npm run dev
-    ports:
-      - "5173:5173"
-    networks:
-      - xadras-network
+      - /app/node_modules
+    command: npm run dev -- --config vite.config.dev.ts --host

@@ -112,7 +112,7 @@ RUN { \
     echo '            print("Max retries reached. Exiting.")'; \
     echo '            sys.exit(1)'; \
     echo '        time.sleep(retry_delay)'; \
-} > /usr/local/bin/wait_for_db.py
+    } > /usr/local/bin/wait_for_db.py
 
 # Create a simple entrypoint script using HEREDOC for better readability
 RUN { \
@@ -135,7 +135,7 @@ RUN { \
     echo ''; \
     echo '# Execute the passed command (CMD)'; \
     echo 'exec "$@"'; \
-} > /usr/local/bin/entrypoint.sh && \
+    } > /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh && \
     dos2unix /usr/local/bin/entrypoint.sh
 

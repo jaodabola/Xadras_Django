@@ -38,3 +38,7 @@ django-cors-headers
 sendgrid  # Para envio de emails (desativado)
 
 python-json-logger
+
+# Testing
+pytest
+pytest-django

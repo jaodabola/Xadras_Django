@@ -26,8 +26,30 @@ COPY . .
 RUN mkdir -p /usr/src/app/staticfiles /usr/src/app/media \
     && chmod -R 755 /usr/src/app/staticfiles /usr/src/app/media
 
-# Final stage
-FROM python:3.11-slim
+# Base development stage
+FROM python:3.11-slim as dev
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random
+
+# Set work directory
+WORKDIR /usr/src/app
+
+# Install system dependencies for development
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies directly for dev
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt python-json-logger
+
+# Production stage
+FROM python:3.11-slim as prod
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -111,8 +133,8 @@ RUN { \
     echo '# Collect static files'; \
     echo 'python manage.py collectstatic --noinput --clear'; \
     echo ''; \
-    echo '# Start Daphne ASGI server for WebSocket support'; \
-    echo 'exec python -m daphne -b 0.0.0.0 -p 8000 xadras.asgi:application'; \
+    echo '# Execute the passed command (CMD)'; \
+    echo 'exec "$@"'; \
 } > /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh && \
     dos2unix /usr/local/bin/entrypoint.sh

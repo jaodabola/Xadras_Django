@@ -19,8 +19,8 @@ class MoveSerializer(serializers.ModelSerializer):
 
 
 class GameSerializer(serializers.ModelSerializer):
-    white_player = UserSerializer()
-    black_player = UserSerializer()
+    white_player = UserSerializer(read_only=True)
+    black_player = UserSerializer(read_only=True)
     moves = MoveSerializer(many=True, read_only=True)
     move_count = serializers.IntegerField(read_only=True)
     tournament_id = serializers.SerializerMethodField()

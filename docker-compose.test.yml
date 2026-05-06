@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: prod
+    command: >
+      sh -c "python manage.py migrate --noinput && python -m pytest -v --tb=short"
+    env_file:
+      - .env
+    environment:
+      - DEBUG=False
+      - DJANGO_SETTINGS_MODULE=xadras.settings
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - xadras-network
+
+  db:
+    image: postgres:15-alpine
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 3s
+      retries: 10
+    networks:
+      - xadras-network
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 3s
+      retries: 5
+    networks:
+      - xadras-network

@@ -8,7 +8,7 @@ import TournamentInfoTab from './Components/TournamentInfoTab';
 import TournamentPairingsTab from './Components/TournamentPairingsTab';
 import TournamentStandingsTab from './Components/TournamentStandingsTab';
 import TournamentDeleteModal from './Components/TournamentDeleteModal';
-import { IconArrowRight, IconCrown, IconUsers, IconCalendar, IconClock, IconEdit, IconTrash, IconPlay, IconCamera, IconTrophy } from '../../components/Icons/Icons';
+import { IconArrowRight, IconCrown, IconUsers, IconCalendar, IconClock, IconEdit, IconTrash, IconPlay, IconTrophy } from '../../components/Icons/Icons';
 import './TournamentDetail.css';
 
 interface Pairing {
@@ -44,9 +44,6 @@ const TournamentDetail: React.FC = () => {
     leaveTournament,
     deleteTournament,
     startTournament,
-    generatePairings,
-    assignBoards,
-    startRound,
     getStandings,
     loading,
     error,
@@ -176,36 +173,7 @@ const TournamentDetail: React.FC = () => {
     }
   };
 
-  const handleStartRound = async () => {
-    if (!id) return;
-    try {
-      setActionLoading('start_round');
-      await startRound(id);
-      await loadTournamentData();
-    } catch (err) {
-      console.error('Error starting round:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
-  const handleAssignBoards = async () => {
-    if (!id || !pairings.length) return;
-    try {
-      setActionLoading('assign_boards');
-      const assignments = pairings.map((pairing, index) => ({
-        pairing_id: pairing.id,
-        physical_board_id: `board_${String(index + 1).padStart(3, '0')}`,
-        camera_id: index + 1
-      }));
-      await assignBoards(id, { assignments });
-      await loadTournamentData();
-    } catch (err) {
-      console.error('Error assigning boards:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const handleDeleteTournament = async () => {
     if (!id) return;

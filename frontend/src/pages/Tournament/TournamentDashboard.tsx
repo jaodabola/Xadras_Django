@@ -13,7 +13,6 @@ const TournamentDashboard: React.FC = () => {
     loading,
     error,
     fetchTournaments,
-    joinTournament,
     clearError
   } = useTournament();
 
@@ -35,13 +34,7 @@ const TournamentDashboard: React.FC = () => {
     return matchesFilter && matchesSearch;
   });
 
-  const handleJoinTournament = async (tournamentId: string) => {
-    try {
-      await joinTournament(tournamentId);
-    } catch (err) {
-      // Error is handled by context
-    }
-  };
+
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {

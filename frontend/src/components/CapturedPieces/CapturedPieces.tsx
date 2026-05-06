@@ -34,7 +34,7 @@ const CapturedPieces: React.FC<CapturedPiecesProps> = ({
           <span className="material-count">+{calculateMaterial(pieces)}</span>
         </div>
         <div className="captured-pieces-list">
-          {Object.entries(countMap).map(([piece, count], index) => (
+          {Object.entries(countMap).map(([piece, count]) => (
             <div key={`${color}-${piece}`} className="captured-piece-wrapper">
               <span className={`captured-piece ${color}`}>
                 {getPieceSymbol({ type: piece, color: color === 'white' ? 'b' : 'w' })}

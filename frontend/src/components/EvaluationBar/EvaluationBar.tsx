@@ -7,7 +7,7 @@ interface EvaluationBarProps {
   orientation?: 'white' | 'black';
 }
 
-const EvaluationBar: React.FC<EvaluationBarProps> = ({ evaluation, orientation = 'white' }) => {
+const EvaluationBar: React.FC<EvaluationBarProps> = ({ evaluation }) => {
   // A barra vai de -10 (Vantagem Preta) a +10 (Vantagem Branca)
   // 0 é o centro geométrico (50%)
   const MAX_CAP = 10.0;

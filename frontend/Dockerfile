@@ -1,25 +1,23 @@
-# Build stage
-FROM node:20-alpine as build
-
-# Set working directory
+# Base stage for dependencies
+FROM node:20-alpine as base
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-COPY package-lock.json* ./
+RUN npm install
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+# Development stage
+FROM base as dev
 COPY . .
+# No need to build, command will be npm run dev in compose
+EXPOSE 5173
 
-# Build the application with verbose output
+# Build stage for production
+FROM base as build
+COPY . .
 RUN npm run type-check -- --pretty
 RUN npm run build -- --debug
 
 # Production stage
-FROM nginx:stable-alpine
+FROM nginx:stable-alpine as prod
 
 # Delete old static files before copying new ones
 RUN rm -rf /usr/share/nginx/html/*

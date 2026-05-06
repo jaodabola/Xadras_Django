@@ -15,7 +15,6 @@ const GameOverModal: React.FC<GameOverModalProps> = ({
   message,
   isSpectator,
   gameType,
-  tournamentId,
   onNewGame,
   onGoHome,
   onBackToTournament

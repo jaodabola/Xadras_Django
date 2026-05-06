@@ -17,8 +17,9 @@ class GameViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Para leitura (retrieve/list): inclui também jogos de torneio para permitir assistir
-        if self.action in ('retrieve', 'replay'):
+        
+        # Para leitura (retrieve/list/replay): inclui jogos do utilizador e jogos de torneio
+        if self.action in ('retrieve', 'list', 'replay'):
             from tournaments.models import TournamentPairing
             tournament_game_ids = TournamentPairing.objects.filter(
                 game__isnull=False
@@ -28,7 +29,12 @@ class GameViewSet(viewsets.ModelViewSet):
                 models.Q(black_player=user) |
                 models.Q(id__in=tournament_game_ids)
             )
-        # Para escrita: apenas jogos em que o utilizador participa
+            
+        # Para entrar num jogo, precisamos de poder ver os jogos PENDING onde não estamos
+        if self.action == 'join':
+            return Game.objects.all()
+            
+        # Para outras ações de escrita (move, end): apenas jogos em que o utilizador participa
         return Game.objects.filter(
             models.Q(white_player=user) | models.Q(black_player=user)
         )

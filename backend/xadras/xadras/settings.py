@@ -29,8 +29,10 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 # Consulte https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # AVISO DE SEGURANÇA: mantenha a chave secreta usada em produção em segredo!
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY', 'django-insecure-(p0t&gj%=i=swv3imsk16j8sv+x0un*g+pn-qj3+^emc+hy4vd')
+_secret = os.environ.get('SECRET_KEY')
+if not _secret:
+    raise ValueError('SECRET_KEY deve ser definida como variável de ambiente!')
+SECRET_KEY = _secret
 
 # AVISO DE SEGURANÇA: não execute com o debug ativado em produção!
 # O padrão é False se não estiver definido no ambiente
@@ -69,25 +71,15 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = 'accounts.User'
 
 # Configuração de CORS
-CORS_ALLOWED_ORIGINS = [
-    'https://xadras.pt',
-    'https://www.xadras.pt',
-    'http://localhost',
-    'http://127.0.0.1',
-    'http://localhost:8000',
-    'http://localhost:5173',
-]
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    'CORS_ALLOWED_ORIGINS',
+    'https://xadras.pt,https://www.xadras.pt,http://localhost,http://127.0.0.1,http://localhost:8000,http://localhost:5173'
+).split(',')
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost',
-    'http://127.0.0.1',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://www.xadras.pt',
-    'https://xadras.pt',
-]
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CORS_ALLOWED_ORIGINS',  # Usamos a mesma lista por conveniência
+    'https://xadras.pt,https://www.xadras.pt,http://localhost,http://127.0.0.1,http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,http://127.0.0.1:5173'
+).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = os.environ.get(
@@ -115,6 +107,14 @@ SESSION_COOKIE_HTTPONLY = True
 # Apenas se estiver a usar HTTPS
 CSRF_COOKIE_SECURE = True  # Definir como True em produção com HTTPS
 SESSION_COOKIE_SECURE = True  # Definir como True em produção com HTTPS
+
+# Segurança HSTS e SSL (apenas em produção com HTTPS)
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000  # 1 ano
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = False  # O Cloudflare/Nginx já trata o redirect
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

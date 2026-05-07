@@ -6,9 +6,11 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 // Criar instância do axios com URL base
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
+  xsrfCookieName: 'csrftoken',
+  xsrfHeaderName: 'X-CSRFToken',
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true', // Ignorar aviso do ngrok no browser
   },
 });
 

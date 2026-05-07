@@ -42,6 +42,8 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS', 'xadras.pt,www.xadras.pt,localhost,127.0.0.1').split(',')
 
+USE_X_FORWARDED_HOST = True
+
 
 # Definição da aplicação
 
@@ -114,7 +116,8 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = False  # O Cloudflare/Nginx já trata o redirect
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -405,7 +408,7 @@ LOGGING = {
             'handlers': ['matchmaking_file', 'console'],
             'level': 'DEBUG',
             'propagate': False,
-        },
+        },  
         'matchmaking.command': {
             'handlers': ['matchmaking_file', 'console'],
             'level': 'DEBUG',
